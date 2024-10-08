@@ -7,7 +7,7 @@ class Card:
         suit (str): The suit of the card.
     """
     ranks = [_ for _ in range(2,11)] + ['JACK', 'QUEEN', 'KING', 'ACE']
-    suits = ['SPADE', 'HEART', 'DIAMOND', 'CLUB']
+    suits = ['♠', '♥', '♦', '♣']
 
     def __init__(self, rank, suit):
         self.rank = rank
@@ -31,7 +31,7 @@ class Card:
         }
         rank = self.rank
         rank = case[rank] if rank in case else rank
-        return f'{rank} of {self.suit}S'
+        return f'{self.suit}{rank}'
 
     @property
     def rank(self):

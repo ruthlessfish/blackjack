@@ -13,12 +13,14 @@ class Deck:
     
     def shuffle(self):
         self._cards.extend(self._discarded)
-        self._cards.extend(self._dealt)
+        # self._cards.extend(self._dealt)
         self._discarded = []
         self._dealt = []
         random.shuffle(self._cards)
     
     def deal(self):
+        if len(self._cards) == 0:
+            self.shuffle()
         new_card = self._cards.pop()
         self._dealt.append(new_card)
         return new_card
