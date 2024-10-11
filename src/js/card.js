@@ -64,5 +64,6 @@ class Card {
     const col = RANKS.indexOf(this.rank);
     return {row, col};
   }
+}
 
 export default Card;

@@ -1,4 +1,4 @@
-import {RANKS, SUITS, Card} from './card.js';
+import Card, {RANKS, SUITS} from './card.js';
 
 class Deck {
     constructor() {
@@ -12,8 +12,8 @@ class Deck {
         this.cards = [];
         this.dealt = [];
         this.discarded = [];
-        for (suit of SUITS) {
-            for (rank of RANKS) {
+        for (let suit of SUITS) {
+            for (let rank of RANKS) {
                 this.cards.push(new Card(rank, suit));
             }
         }
@@ -30,7 +30,7 @@ class Deck {
         }
     }
 
-    deal() {
+    draw() {
         if (this.cards.length === 0) {
             this.shuffle();
         }
