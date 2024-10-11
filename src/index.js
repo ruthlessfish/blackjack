@@ -6,54 +6,58 @@ import { Player, Dealer } from "./js/player.js";
 import './css/style.css';
 import SpriteSheet from './assets/windows-playing-cards.png';
 
-console.log("shuffling a new deck");
+console.debug("shuffling a new deck");
 const deck = new Deck();
 deck.shuffle();
 
-console.log("load players");
+console.debug("load players");
 const player = new Player("Player 1", 1000);
 const dealer = new Dealer("Dealer");
 
-console.log('set up canvas context');
+console.debug("set up canvas context");
 const canvas = document.getElementById("game-screen");
 const ctx = canvas.getContext("2d");
-console.log('loading sprites');
+console.debug("loading sprites");
 const sprites = new Image();
 sprites.src = SpriteSheet;
 
 sprites.onload = () => {
-  console.log('sprites loaded');
+  console.debug("sprites loaded");
   
   // this will be called inside of a while loop
   gameLoop();
 };
 
 const gameLoop = () => {
-  console.log(`Player name: ${player.name}`);
-  console.log(`cash available: ${player.bankroll}`);
-  console.log(`w/l/t: ${player.wins}/${player.losses}/${player.ties}`);
-  console.log(`Blackjacks: ${player.blackjacks}`);
+  console.debug(`Player name: ${player.name}`);
+  console.debug(`cash available: ${player.bankroll}`);
+  console.debug(`w/l/t: ${player.wins}/${player.losses}/${player.ties}`);
+  console.debug(`Blackjacks: ${player.blackjacks}`);
 
-  console.log("Getting valid bet from player");
+  console.debug("Getting valid bet from player");
   // @todo: call getValidBet
 
-  console.log("Dealing cards");
+  console.debug("Dealing cards");
   deal();
 };
 
 const deal = () => {
   let card;
   for (let i of [1, 2]) {
-    console.log(`Dealing card #${i} to player`);
+    console.debug(`Dealing card #${i} to player`);
     card = deck.draw();
     player.addCard(card);
-    console.log(card);
-    drawPlayerCard(card);
-    console.log(`Dealing card #${i} to dealer`);
+    console.debug(card);
+    console.debug(`Dealing card #${i} to dealer`);
     card = deck.draw();
+    if (i === 1) {
+      card.faceUp = false;
+    }
     dealer.addCard(card);
-    console.log(card);
+    console.debug(card);
   }
+  drawPlayerHand();
+  drawDealerHand();
 };
 
 const getValidBet = () => {
@@ -64,13 +68,36 @@ const getValidBet = () => {
   return bet;
 };
 
-const drawPlayerCard = card => {
-  // player hand area = 200, 400, 600, 500
+const drawCard = (card, locX, locY) => {
   const width = Card.FRAME_WIDTH - 1;
   const height = Card.FRAME_HEIGHT - 1;
-  const {x, y} = card.getSpriteOffset();
-  console.log(x, y, width, height, x*width, y*height);
-  ctx.drawImage(sprites,1, 1, width, height, 200, 400, width, height);
+  if (card.isFaceUp()) {
+    const {x, y} = card.getSpriteOffset();
+    ctx.drawImage(sprites, x*width+1, y*height+1, width-1, height-1, locX, locY, width-1, height-1);
+  } else {
+    ctx.fillStyle = "darkblue";
+    ctx.fillRect(locX, locY, width, height);
+  }
+};
+
+const drawPlayerHand = () => {
+  let hand = player.hand;
+  let x = 200;
+  let y = 400;
+  for (let card of hand) {
+    drawCard(card, x, y);
+    x += 40;
+  }
+};
+
+const drawDealerHand = (hideFirst = true) => {
+  let hand = dealer.hand;
+  let x = 200;
+  let y = 100;
+  for (let card of hand) {
+    drawCard(card, x, y);
+    x += 40;
+  }
 };
 
 /*function handlePlayerTurn() {
