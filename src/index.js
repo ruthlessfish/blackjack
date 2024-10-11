@@ -48,6 +48,7 @@ const deal = () => {
     card = deck.draw();
     player.addCard(card);
     console.log(card);
+    drawPlayerCard(card);
     console.log(`Dealing card #${i} to dealer`);
     card = deck.draw();
     dealer.addCard(card);
@@ -63,11 +64,20 @@ const getValidBet = () => {
   return bet;
 };
 
+const drawPlayerCard = card => {
+  // player hand area = 200, 400, 600, 500
+  const width = Card.FRAME_WIDTH - 1;
+  const height = Card.FRAME_HEIGHT - 1;
+  const {x, y} = card.getSpriteOffset();
+  console.log(x, y, width, height, x*width, y*height);
+  ctx.drawImage(sprites,1, 1, width, height, 200, 400, width, height);
+};
+
 /*function handlePlayerTurn() {
   while(player.in_game) {
     let action = prompt("Enter your action (hit, stand, double down, split):");
     switch(action.toLowerCase()) {
-      case "hit":
+      case "hit": 
         player.addCard(deck.draw());
         break;
       case "stand":

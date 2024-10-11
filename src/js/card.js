@@ -60,9 +60,9 @@ class Card {
   }
 
   getSpriteOffset() {
-    const row = SUITS.indexOf(this.suit);
-    const col = RANKS.indexOf(this.rank);
-    return {row, col};
+    const x = SUITS.indexOf(this.suit);
+    const y = RANKS.indexOf(this.rank);
+    return {x, y};
   }
 }
 
