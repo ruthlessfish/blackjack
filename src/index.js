@@ -1,14 +1,9 @@
 import _ from 'lodash';
-
 import Card from "./js/card.js";
 import Deck from "./js/deck.js";
 import { Player, Dealer } from "./js/player.js";
 import './css/style.css';
 import SpriteSheet from './assets/sprites.png';
-
-console.debug("shuffling a new deck");
-const deck = new Deck();
-deck.shuffle();
 
 console.debug("load players");
 const player = new Player("Player 1", 1000);
@@ -17,29 +12,53 @@ const dealer = new Dealer("Dealer");
 console.debug("set up canvas context");
 const canvas = document.getElementById("blackjack-table");
 const ctx = canvas.getContext("2d");
+
+const splitButton = document.getElementById("split-button");
+const hitButton = document.getElementById("hit-button");
+const standButton = document.getElementById("stand-button");
+const doubleButton = document.getElementById("double-button");
+
 console.debug("loading sprites");
 const sprites = new Image();
+sprites.fetchPriority = "high";
+sprites.loading = "eager";
 sprites.src = SpriteSheet;
-sprites.onload = () => { console.debug("sprites loaded"); };
+sprites.addEventListener("load", e => {
+  console.debug("sprites loaded");
+});
+
+console.debug("shuffling a new deck");
+const deck = new Deck();
+deck.shuffle();
+
+hitButton.addEventListener("click", e => {
+  if (!hitButton.disabled) {
+    let newCard = deck.draw();
+    console.debug(`Player drew: ${newCard.toString()}`);
+    player.addCard(newCard);
+    console.debug(`${player.name}'s hand: ${player.showHand()}`);
+    console.debug(`${player.name}'s score: ${player.getScore()}`);
+    drawPlayerHand();
+    checkPlayerHand();
+  }
+});
+
+standButton.addEventListener("click", e => {
+  if (!standButton.disabled) {
+    endPlayerTurn();
+  }
+});
 
 const main = () => {
   console.debug(`Player name: ${player.name}`);
   console.debug(`cash available: ${player.bankroll}`);
   console.debug(`w/l/t: ${player.wins}/${player.losses}/${player.ties}`);
   console.debug(`Blackjacks: ${player.blackjacks}`);
-
-  console.debug("Getting valid bet from player");
+  // console.debug("Getting valid bet from player");
   // @todo: call getValidBet
-
   console.debug("Dealing cards");
   deal();
-  // handlePlayerTurn();
-  // handleDealerTurn();
-  // updateHands();
-  // determineWinner();
-  // player.reset();
-  // dealer.reset();
-  // deck.discard();
+  checkPlayerHand();
 };
 
 /**
@@ -53,6 +72,8 @@ const deal = () => {
   dealer.addCard(deck.draw());
   drawPlayerHand();
   drawDealerHand();
+  hitButton.disabled = false;
+  standButton.disabled = false;
 };
 
 /**
@@ -72,45 +93,31 @@ const getValidBet = () => {
 /**
  * Handles the player's turn in the game.
  */
-const handlePlayerTurn = () => {
-  while (player.isInGame()) {
-    console.debug(`${player.name}'s hand: ${player.showHand()}`);
-    console.debug(`${player.name}'s score: ${player.getScore()}`);
-    console.debug(`${dealer.name} is showing: ${dealer.hand[0].toString()}`);
-
-    if (player.hasBlackjack()) {
-      alert("Blackjack!");
-      break;
-    }
-
-    if (player.isBusted()) {
-      alert("Busted!");
-      break;
-    }
-
-    // show controls on canvas
-
-    // let action = prompt("Enter your action (hit, stand, double down, split):");
-    let action = prompt("Enter your action (hit, stand):");
-    switch (action.toLowerCase()) {
-      case "hit":
-        let newCard = deck.draw();
-        console.debug(`Player drew: ${newCard.toString()}`);
-        player.addCard(newCard);
-        console.debug(`${player.name}'s hand: ${player.showHand()}`);
-        console.debug(`${player.name}'s score: ${player.getScore()}`);
-        break;
-      case "stand":
-        player.in_game = false;
-        break;
-    }
+const checkPlayerHand = () => {
+  console.debug(`${player.name}'s hand: ${player.showHand()}`);
+  console.debug(`${player.name}'s score: ${player.getScore()}`);
+  console.debug(`${dealer.name} is showing: ${dealer.hand[0].toString()}`);
+  if (player.hasBlackjack() || player.isBusted()) {
+    endPlayerTurn();
   }
+};
+
+const endPlayerTurn = () => {
+  hitButton.disabled = true;
+  standButton.disabled = true;
+  handleDealerTurn();
+  determineWinner();
+  player.reset();
+  dealer.reset();
+  deck.discard();
 };
 
 /**
  * Handles the dealer's turn in a blackjack game.
  */
 const handleDealerTurn = () => {
+  dealer.hand[0].flip();
+  drawDealerHand();
   if (!player.isBusted()) {
     let dealerScore = dealer.getScore();
     while (dealerScore < 17) {
@@ -120,6 +127,7 @@ const handleDealerTurn = () => {
       dealerScore = dealer.getScore();
       console.debug(`${dealer.name}'s hand: ${dealer.showHand()}`);
       console.debug(`${dealer.name}'s score: ${dealerScore}`);
+      drawDealerHand();
     }
   }
 };
@@ -193,16 +201,6 @@ const drawDealerHand = () => {
     drawCard(card, x, y);
     x += 40;
   }
-};
-
-/**
- * Updates and logs the hands and scores of the player and dealer.
- */
-const updateHands = () => {
-  console.debug(`${player.name}'s hand: ${player.showHand()}`);
-  console.debug(`${player.name}'s score: ${player.getScore()}`);
-  console.debug(`${dealer.name}'s hand: ${dealer.showHand()}`);
-  console.debug(`${dealer.name}'s score: ${dealer.getScore()}`);
 };
 
 window.onload = main;

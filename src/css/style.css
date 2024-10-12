@@ -1,9 +1,31 @@
+*, html {
+    margin: 0;
+    padding: 0;
+}
+
 body {
     background: #000033;
     width: 100%;
     height: 100%;
     margin: 20px 0 0 0;
     padding: 0;
+}
+
+header {
+    display: none;
+}
+
+h1 {
+    text-align: center;
+    color: white;
+    font-size: 2em;
+    margin: 0;
+    padding: 0;
+}
+
+#app {
+    width: 800px;
+    margin: 0 auto;
 }
 
 #blackjack-table {
@@ -18,14 +40,19 @@ body {
     height: 600px;
 }
 
-header {
-    display: none;
+#game-controls {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
 }
 
-h1 {
-    text-align: center;
-    color: white;
-    font-size: 2em;
-    margin: 0;
-    padding: 0;
+#game-controls button {
+    margin: 10px;
+    padding: 10px 25px;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 5px;
+    width: 120px;
+    border: 1px solid white;
+    background-color: #cccccc;
 }

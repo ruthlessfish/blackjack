@@ -83,6 +83,10 @@ class Card {
     this._suit = suit;
   }
 
+  flip() {
+    this.faceUp = !this.faceUp;
+  }
+
   /**
    * Checks if the card is face up.
    * @returns {boolean} True if the card is face up, false otherwise.
