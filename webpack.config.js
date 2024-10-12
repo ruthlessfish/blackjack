@@ -4,20 +4,19 @@ const HtmlWebpackPlugin = require("html-webpack-plugin");
 
 module.exports = {
   mode: "development",
-  entry: {
-    index: "./src/index.js",
-  },
+  entry: "./src/index.js",
   devtool: "inline-source-map",
   devServer: {
     static: "./dist",
   },
   plugins: [
     new HtmlWebpackPlugin({
-      title: "Output Management",
+      title: "Blackjack",
+      template: 'src/html/index.html'
     }),
   ],
   output: {
-    filename: "[name].bundle.js",
+    filename: "bundle.js",
     path: path.resolve(__dirname, "dist"),
     clean: true,
     publicPath: "/",
@@ -27,11 +26,13 @@ module.exports = {
       {
         test: /\.css$/,
         use: ["style-loader", "css-loader"],
+        include: path.resolve(__dirname, "src/css"),
       },
       {
         test: /\.(png|svg|jpg|jpeg|gif)$/i,
         type: "asset/resource",
+        include: path.resolve(__dirname, "src/assets"),
       },
     ],
-  }
+  },
 };
