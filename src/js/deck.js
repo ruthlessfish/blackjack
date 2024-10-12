@@ -1,6 +1,13 @@
 import Card, {RANKS, SUITS} from './card.js';
 
+/**
+ * Represents a deck of playing cards.
+ */
 class Deck {
+    /**
+     * Represents a deck of cards.
+     * @constructor
+     */
     constructor() {
         this.cards = [];
         this.dealt = [];
@@ -8,6 +15,9 @@ class Deck {
         this.populate();
     }
 
+    /**
+     * Populates the deck with a standard set of playing cards.
+     */
     populate() {
         this.cards = [];
         this.dealt = [];
@@ -19,6 +29,9 @@ class Deck {
         }
     }
 
+    /**
+     * Shuffles the deck by randomly reordering the cards.
+     */
     shuffle() {
         this.cards = this.cards.concat(this.discarded);
         this.discarded = [];
@@ -30,15 +43,25 @@ class Deck {
         }
     }
 
-    draw() {
+    /**
+     * Draws a card from the deck.
+     * 
+     * @param {boolean} [faceDown=false] - Whether the drawn card should be face down.
+     * @returns {object} - The drawn card.
+     */
+    draw(faceDown = false) {
         if (this.cards.length === 0) {
             this.shuffle();
         }
         let card = this.cards.pop();
+        card.faceUp = !faceDown;
         this.dealt.push(card);
         return card;
     }
 
+    /**
+     * Discards the dealt cards and adds them to the discarded pile.
+     */
     discard() {
         this.discarded = this.discarded.concat(this.dealt);
         this.dealt = [];

@@ -6,13 +6,20 @@ body {
     padding: 0;
 }
 
-#game-screen {
-    background: darkgreen url('../assets/felt.png') repeat fixed center / auto;
+#blackjack-table {
+    background-image: url('../assets/table.png');
+    background-position: top left;
+    background-repeat: no-repeat;
+    background-size: auto auto;
     display: block;
     margin: 0 auto;
     border: 1px solid black;
     width: 800px;
     height: 600px;
+}
+
+header {
+    display: none;
 }
 
 h1 {
