@@ -31,6 +31,17 @@ section p {
     padding: 0;
 }
 
+footer {
+    text-align: center;
+    color: white;
+    font-size: 1.5em;
+    margin: 0;
+    padding: 0;
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+}
+
 #app {
     width: 800px;
     margin: 0 auto;
@@ -60,6 +71,13 @@ section p {
     padding: 0;
 }
 
+#player-info {
+    background-color: #c0c0c0;
+    color: black;
+    font-size: 11px;
+    padding: 10px;
+}
+
 #player-info > div {
     display: flex;
     justify-content: space-between;
@@ -68,6 +86,7 @@ section p {
 
 #player-info > div > p {
     font-weight: bold;
+    color: black;
 }
 
 #player-info > div > p > span {

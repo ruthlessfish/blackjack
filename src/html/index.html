@@ -12,6 +12,13 @@
       <section id="table-view">
         <canvas id="blackjack-table" width="800" height="600"></canvas>
       </section>
+      <section id="player-info">
+        <div style="display: flex">
+          <p>Player: <span id="player-name"></span></p>
+          <p>Bankroll: <span id="player-bankroll"></span></p>
+          <p>Wins: <span id="player-wins"></span></p>
+        </div>
+      </section>
       <section id="user-controls">
         <p id="message">Place your bet:</p>
         <div class="controls" id="betting-controls">
@@ -29,13 +36,6 @@
             <button id="hit-button">Hit</button>
             <button id="stand-button">Stand</button>
             <button id="double-button" disabled>Double</button>
-        </div>
-      </section>
-      <section id="player-info">
-        <div style="display: flex">
-          <p>Player: <span id="player-name"></span></p>
-          <p>Bankroll: <span id="player-bankroll"></span></p>
-          <p>Wins: <span id="player-wins"></span></p>
         </div>
       </section>
     </main>

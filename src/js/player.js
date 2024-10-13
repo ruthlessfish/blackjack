@@ -142,8 +142,8 @@ class Player extends Participant {
             this.blackjacks += 1;
             winMultiplier = 1.5;
         }
-        self.bankroll += self.bet * (1+winMultiplier);
-        self.bet = 0;
+        this.bankroll += this.bet * (1+winMultiplier);
+        this.bet = 0;
     }
 
     /**

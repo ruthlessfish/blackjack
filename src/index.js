@@ -139,12 +139,7 @@ const endPlayerTurn = () => {
   standButton.disabled = true;
   handleDealerTurn();
   determineWinner();
-  player.reset();
-  dealer.reset();
-  deck.discard();
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  bettingControls.style.display = "block";
-  gameControls.style.display = "none";
+  setTimeout(resetGame, 3000);
 };
 
 /**
@@ -228,6 +223,15 @@ const drawDealerHand = () => {
     drawCard(card, x, y);
     x += 40;
   }
+};
+
+const resetGame = () => {
+  player.reset();
+  dealer.reset();
+  deck.discard();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  bettingControls.style.display = "block";
+  gameControls.style.display = "none";
 };
 
 // window.addEventListener("load", main);
