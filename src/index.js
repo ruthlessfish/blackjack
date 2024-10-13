@@ -1,3 +1,5 @@
+'use strict';
+
 import _ from 'lodash';
 import Card from "./js/card.js";
 import Deck from "./js/deck.js";
@@ -17,12 +19,58 @@ sprites.fetchPriority = "high";
 sprites.loading = "eager";
 sprites.src = SpriteSheet;
 
+let message = document.getElementById("message");
+let betAmount = 0;
+
+// user controls
+const bettingControls = document.getElementById("betting-controls");
+const bet5Button = document.getElementById("bet-5");
+const bet10Button = document.getElementById("bet-10");
+const bet25Button = document.getElementById("bet-25");
+const bet50Button = document.getElementById("bet-50");
+const bet100Button = document.getElementById("bet-100");
+const bet500Button = document.getElementById("bet-500");
+const clearBetButton = document.getElementById("clear-bet");
+const dealButton = document.getElementById("deal-button");
+
+const handleBetButtonClick = function(e) {
+  let amount = parseInt(e.target.textContent);
+  if (player.bankroll >= betAmount + amount) {
+    betAmount += amount;
+    message.textContent = `Bet: $${betAmount}`;
+  }
+};
+
+bet5Button.addEventListener("click", handleBetButtonClick);
+bet10Button.addEventListener("click", handleBetButtonClick);
+bet25Button.addEventListener("click", handleBetButtonClick);
+bet50Button.addEventListener("click", handleBetButtonClick);
+bet100Button.addEventListener("click", handleBetButtonClick);
+bet500Button.addEventListener("click", handleBetButtonClick);
+
+clearBetButton.addEventListener("click", function(e) {
+  betAmount = 0;
+  message.textContent = "Place your bet:";
+});
+
+dealButton.addEventListener("click", function(e) {
+  if (betAmount > 0) {
+    player.placeBet(betAmount);
+    bettingControls.style.display = "none";
+    gameControls.style.display = "block";
+    betAmount = 0;
+    deal();
+  }
+});
+
+// game controls
+const gameControls = document.getElementById("game-controls");
 const splitButton = document.getElementById("split-button");
 const hitButton = document.getElementById("hit-button");
 const standButton = document.getElementById("stand-button");
 const doubleButton = document.getElementById("double-button");
 
-hitButton.addEventListener("click", e => {
+hitButton.addEventListener("click", (e) => {
   if (!hitButton.disabled) {
     let newCard = deck.draw();
     player.addCard(newCard);
@@ -31,11 +79,21 @@ hitButton.addEventListener("click", e => {
   }
 });
 
-standButton.addEventListener("click", e => {
+standButton.addEventListener("click", (e) => {
   if (!standButton.disabled) {
     endPlayerTurn();
   }
 });
+
+const playerNameEl = document.getElementById("player-name");
+const playerBankrollEl = document.getElementById("player-bankroll");
+const playerWinsEl = document.getElementById("player-wins");
+
+const drawPlayerInfo = () => {
+  playerNameEl.textContent = player.name;
+  playerBankrollEl.textContent = `Bankroll: $${player.bankroll}`;
+  playerWinsEl.textContent = `Wins: ${player.wins}`;
+};
 
 /**
  * Deals cards to the player and dealer.
@@ -84,6 +142,9 @@ const endPlayerTurn = () => {
   player.reset();
   dealer.reset();
   deck.discard();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  bettingControls.style.display = "block";
+  gameControls.style.display = "none";
 };
 
 /**
@@ -109,24 +170,25 @@ const handleDealerTurn = () => {
  */
 const determineWinner = () => {
   if (player.isBusted()) {
-    alert("Dealer wins.");
+    message.textContent = "Dealer wins.";
     player.lose();
   } else if (dealer.isBusted()) {
-    alert("You win.");
+    message.textContent = "You win.";
     player.win();
   } else if (player.hasBlackjack()) {
-    alert("Blackjack! You win!");
+    message.textContent = "Blackjack! You win!";
     player.win(true);
   } else if (player.getScore() == dealer.getScore()) {
-    alert("Push.");
+    message.textContent = "Push.";
     player.push();
   } else if (player.getScore() > dealer.getScore()) {
-    alert("You win.");
+    message.textContent = "You win.";
     player.win();
   } else {
-    alert("Dealer wins.");
+    message.textContent = "Dealer wins.";
     player.lose();
-    }
+  }
+  drawPlayerInfo();
 };
 
 /**
@@ -168,4 +230,5 @@ const drawDealerHand = () => {
   }
 };
 
-window.onload = deal;
+// window.addEventListener("load", main);
+window.onload = drawPlayerInfo;
