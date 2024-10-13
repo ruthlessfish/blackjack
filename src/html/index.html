@@ -12,11 +12,24 @@
       <section id="table-view">
         <canvas id="blackjack-table" width="800" height="600"></canvas>
       </section>
-      <section id="game-controls">
-        <button id="split-button" disabled>Split</button>
-        <button id="hit-button">Hit</button>
-        <button id="stand-button">Stand</button>
-        <button id="double-button" disabled>Double</button>
+      <section id="user-controls">
+        <p id="message">Place your bet:</p>
+        <div class="controls" id="betting-controls">
+          <button id="clear-bet">Clear</button>
+          <button class="chip" id="bet-5">5</button>
+          <button class="chip" id="bet-10">10</button>
+          <button class="chip" id="bet-25">25</button>
+          <button class="chip" id="bet-50">50</button>
+          <button class="chip" id="bet-100">100</button>
+          <button class="chip" id="bet-500">500</button>
+          <button id="deal-button">Deal</button>
+        </div>
+        <div class="controls" id="game-controls" style="display:none">
+            <button id="split-button" disabled>Split</button>
+            <button id="hit-button">Hit</button>
+            <button id="stand-button">Stand</button>
+            <button id="double-button" disabled>Double</button>
+        </div>
       </section>
     </main>
   </body>
