@@ -12,11 +12,17 @@ while (!playerName) {
   playerName = prompt("Enter your name:");
 }
 
+// load player, dealer, and deck
 const player = new Player(playerName, 1000);
 const dealer = new Dealer("Dealer");
+
 const deck = new Deck();
 deck.shuffle();
 
+let message = document.getElementById("message");
+let betAmount = 0;
+
+// load graphics
 const canvas = document.getElementById("blackjack-table");
 const ctx = canvas.getContext("2d");
 const sprites = new Image();
@@ -24,8 +30,10 @@ sprites.fetchPriority = "high";
 sprites.loading = "eager";
 sprites.src = SpriteSheet;
 
-let message = document.getElementById("message");
-let betAmount = 0;
+
+/**
+ * Controller button bindings
+ */
 
 // user controls
 const bettingControls = document.getElementById("betting-controls");
@@ -37,8 +45,28 @@ const bet100Button = document.getElementById("bet-100");
 const bet500Button = document.getElementById("bet-500");
 const clearBetButton = document.getElementById("clear-bet");
 const dealButton = document.getElementById("deal-button");
+// game controls
+const gameControls = document.getElementById("game-controls");
+const splitButton = document.getElementById("split-button");
+const hitButton = document.getElementById("hit-button");
+const standButton = document.getElementById("stand-button");
+const doubleButton = document.getElementById("double-button");
+// player info
+const playerNameEl = document.getElementById("player-name");
+const playerBankrollEl = document.getElementById("player-bankroll");
+const playerWinsEl = document.getElementById("player-wins");
 
-const handleBetButtonClick = function(e) {
+/**
+ * Event Handlers
+ * 
+ */
+
+/**
+ * Handles the click event for the bet button.
+ *
+ * @param {Event} e - The click event object.
+ */
+const handleBetButtonClick = (e) => {
   let amount = parseInt(e.target.textContent);
   if (player.bankroll >= betAmount + amount) {
     betAmount += amount;
@@ -46,19 +74,25 @@ const handleBetButtonClick = function(e) {
   }
 };
 
-bet5Button.addEventListener("click", handleBetButtonClick);
-bet10Button.addEventListener("click", handleBetButtonClick);
-bet25Button.addEventListener("click", handleBetButtonClick);
-bet50Button.addEventListener("click", handleBetButtonClick);
-bet100Button.addEventListener("click", handleBetButtonClick);
-bet500Button.addEventListener("click", handleBetButtonClick);
-
-clearBetButton.addEventListener("click", function(e) {
+/**
+ * Handles the click event for the clear button.
+ * Resets the bet amount to 0 and updates the message text content.
+ *
+ * @param {Event} e - The click event object.
+ */
+const handleClearButtonClick = (e) => {
   betAmount = 0;
   message.textContent = "Place your bet:";
-});
+};
 
-dealButton.addEventListener("click", function(e) {
+/**
+ * Handles the click event for the "Deal" button.
+ * If the bet amount is greater than 0, places the bet, hides the betting controls,
+ * shows the game controls, resets the bet amount, and calls the "deal" function.
+ *
+ * @param {Event} e - The click event object.
+ */
+const handelDealButtonClick = (e) => {
   if (betAmount > 0) {
     player.placeBet(betAmount);
     bettingControls.style.display = "none";
@@ -66,34 +100,57 @@ dealButton.addEventListener("click", function(e) {
     betAmount = 0;
     deal();
   }
-});
+};
 
-// game controls
-const gameControls = document.getElementById("game-controls");
-const splitButton = document.getElementById("split-button");
-const hitButton = document.getElementById("hit-button");
-const standButton = document.getElementById("stand-button");
-const doubleButton = document.getElementById("double-button");
-
-hitButton.addEventListener("click", (e) => {
+/**
+ * Handles the click event for the hit button.
+ *
+ * @param {Event} e - The click event object.
+ */
+const handleHitButtonClick = (e) => {
   if (!hitButton.disabled) {
     let newCard = deck.draw();
     player.addCard(newCard);
     drawPlayerHand();
     checkPlayerHand();
   }
-});
+};
 
-standButton.addEventListener("click", (e) => {
+/**
+ * Handles the click event for the double button.
+ *
+ * @param {Event} e - The click event object.
+ */
+const handleDoubleButtonClick = (e) => {
+  if (!doubleButton.disabled) {
+    player.doubleDown();
+    let newCard = deck.draw();
+    player.addCard(newCard);
+    drawPlayerHand();
+    endPlayerTurn();
+  }
+};
+
+/**
+ * Handles the click event for the Stand button.
+ * Ends the player's turn if the Stand button is not disabled.
+ *
+ * @param {Event} e - The click event object.
+ */
+const handleStandButtonClick = (e) => {
   if (!standButton.disabled) {
     endPlayerTurn();
   }
-});
+};
 
-const playerNameEl = document.getElementById("player-name");
-const playerBankrollEl = document.getElementById("player-bankroll");
-const playerWinsEl = document.getElementById("player-wins");
+/**
+ * Game logic
+ * 
+ */
 
+/**
+ * Draws the player's information on the screen.
+ */
 const drawPlayerInfo = () => {
   playerNameEl.textContent = player.name;
   playerBankrollEl.textContent = `\$${player.bankroll}`;
@@ -113,21 +170,8 @@ const deal = () => {
   drawDealerHand();
   hitButton.disabled = false;
   standButton.disabled = false;
+  doubleButton.disabled = player.bankroll < player.bet;
   checkPlayerHand();
-};
-
-/**
- * Prompts the user to enter a valid bet amount.
- * The bet amount must be a positive number and cannot exceed the player's balance.
- *
- * @returns {number} The valid bet amount entered by the user.
- */
-const getValidBet = () => {
-  let bet = parseInt(prompt("Enter your bet:"));
-  while (isNaN(bet) || bet < 0 || bet > player.balance) {
-    bet = parseInt(prompt("Invalid bet. Enter your bet:"));
-  }
-  return bet;
 };
 
 /**
@@ -139,9 +183,14 @@ const checkPlayerHand = () => {
   }
 };
 
+/**
+ * Ends the player's turn by disabling the hit and stand buttons,
+ * handling the dealer's turn, determining the winner, and resetting the game after a delay.
+ */
 const endPlayerTurn = () => {
   hitButton.disabled = true;
   standButton.disabled = true;
+  doubleButton.disabled = true;
   handleDealerTurn();
   determineWinner();
   setTimeout(resetGame, 3000);
@@ -230,6 +279,10 @@ const drawDealerHand = () => {
   }
 };
 
+/**
+ * Resets the game by resetting player and dealer, discarding the deck,
+ * clearing the canvas, and updating the display of betting and game controls.
+ */
 const resetGame = () => {
   player.reset();
   dealer.reset();
@@ -239,5 +292,16 @@ const resetGame = () => {
   gameControls.style.display = "none";
 };
 
-// window.addEventListener("load", main);
+// register event listeners
+bet5Button.addEventListener("click", handleBetButtonClick);
+bet10Button.addEventListener("click", handleBetButtonClick);
+bet25Button.addEventListener("click", handleBetButtonClick);
+bet50Button.addEventListener("click", handleBetButtonClick);
+bet100Button.addEventListener("click", handleBetButtonClick);
+bet500Button.addEventListener("click", handleBetButtonClick);
+clearBetButton.addEventListener("click", handleClearButtonClick);
+dealButton.addEventListener("click", handelDealButtonClick);
+hitButton.addEventListener("click", handleHitButtonClick);
+doubleButton.addEventListener("click", handleDoubleButtonClick);
+standButton.addEventListener("click", handleStandButtonClick);
 window.onload = drawPlayerInfo;

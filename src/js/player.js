@@ -53,6 +53,7 @@ class Participant {
      */
     addCard(card) {
         this.hand.push(card);
+        return this;
     }
 
     /**
@@ -105,6 +106,7 @@ class Participant {
     reset() {
         this.hand = [];
         this.in_game = true;
+        return this;
     }
 }
 
@@ -136,6 +138,7 @@ class Player extends Participant {
     placeBet(amount) {
         this.bet = amount;
         this.bankroll -= amount;
+        return this;
     }
     
     /**
@@ -151,6 +154,7 @@ class Player extends Participant {
         }
         this.bankroll += this.bet * (1+winMultiplier);
         this.bet = 0;
+        return this;
     }
 
     /**
@@ -159,6 +163,7 @@ class Player extends Participant {
     lose() {
         this.losses += 1;
         this.bet = 0;
+        return this;
     }
 
     /**
@@ -168,14 +173,19 @@ class Player extends Participant {
         this.ties += 1;
         this.bankroll += this.bet;
         this.bet = 0;
+        return this;
     }
 
     /**
      * Doubles the player's bet and deducts the bet amount from the bankroll.
      */
     doubleDown() {
+        if (this.bankroll < this.bet) {
+            throw new Error('Insufficient funds to double down.');
+        }
         this.bankroll -= this.bet;
         this.bet *= 2;
+        return this;
     }
 
     /**
