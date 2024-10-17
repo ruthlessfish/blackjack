@@ -118,7 +118,7 @@ class Card {
    * @returns {number} The value of the card.
    */
   get value() {
-    if (this.rank in RANKS.slice(0, -4)) {
+    if (this.rank in RANKS.slice(1, -3)) {
       return parseInt(this.rank);
     }
 
