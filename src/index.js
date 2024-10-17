@@ -7,7 +7,12 @@ import { Player, Dealer } from "./js/player.js";
 import './css/style.css';
 import SpriteSheet from './assets/sprites.png';
 
-const player = new Player("Player 1", 1000);
+let playerName;
+while (!playerName) {
+  playerName = prompt("Enter your name:");
+}
+
+const player = new Player(playerName, 1000);
 const dealer = new Dealer("Dealer");
 const deck = new Deck();
 deck.shuffle();
