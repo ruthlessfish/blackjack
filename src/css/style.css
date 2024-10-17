@@ -42,6 +42,12 @@ footer {
     width: 100%;
 }
 
+.press-start-2p-regular {
+    font-family: "Press Start 2P", system-ui;
+    font-weight: 400;
+    font-style: normal;
+}
+
 #app {
     width: 800px;
     margin: 0 auto;
@@ -72,7 +78,8 @@ footer {
 }
 
 #player-info {
-    background-color: #c0c0c0;
+    background: rgb(192, 192, 192);
+    background: linear-gradient(180deg, rgba(192, 192, 192, 1) 0%, rgba(128, 128, 128, 1) 100%);
     color: black;
     font-size: 11px;
     padding: 10px;

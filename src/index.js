@@ -91,8 +91,8 @@ const playerWinsEl = document.getElementById("player-wins");
 
 const drawPlayerInfo = () => {
   playerNameEl.textContent = player.name;
-  playerBankrollEl.textContent = `Bankroll: $${player.bankroll}`;
-  playerWinsEl.textContent = `Wins: ${player.wins}`;
+  playerBankrollEl.textContent = `\$${player.bankroll}`;
+  playerWinsEl.textContent = `${player.wins}`;
 };
 
 /**
@@ -149,11 +149,11 @@ const handleDealerTurn = () => {
   dealer.hand[0].flip();
   drawDealerHand();
   if (!player.isBusted()) {
-    let dealerScore = dealer.getScore();
+    let dealerScore = dealer.score;
     while (dealerScore < 17) {
       let newCard = deck.draw();
       dealer.addCard(newCard);
-      dealerScore = dealer.getScore();
+      dealerScore = dealer.score;
       drawDealerHand();
     }
   }
@@ -173,10 +173,10 @@ const determineWinner = () => {
   } else if (player.hasBlackjack()) {
     message.textContent = "Blackjack! You win!";
     player.win(true);
-  } else if (player.getScore() == dealer.getScore()) {
+  } else if (player.score == dealer.score) {
     message.textContent = "Push.";
     player.push();
-  } else if (player.getScore() > dealer.getScore()) {
+  } else if (player.score > dealer.score) {
     message.textContent = "You win.";
     player.win();
   } else {

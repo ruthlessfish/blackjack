@@ -33,6 +33,13 @@ class Participant {
     }
 
     /**
+     * Get the player's score.
+     */
+    get score() {
+        return this.getScore();
+    }
+
+    /**
      * Checks if the player is currently in the game.
      * @returns {boolean} True if the player is in the game, false otherwise.
      */

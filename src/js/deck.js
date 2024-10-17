@@ -56,6 +56,7 @@ class Deck {
         let card = this.cards.pop();
         card.faceUp = !faceDown;
         this.dealt.push(card);
+        console.log('draw card', card);
         return card;
     }
 

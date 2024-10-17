@@ -3,6 +3,9 @@
   <head>
     <meta charset="utf-8">
     <title>Blackjack</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   </head>
   <body>
     <header>
@@ -12,35 +15,32 @@
       <section id="table-view">
         <canvas id="blackjack-table" width="800" height="600"></canvas>
       </section>
-      <section id="player-info">
+      <section id="player-info" class="press-start-2p-regular">
         <div style="display: flex">
-          <p>Player: <span id="player-name"></span></p>
-          <p>Bankroll: <span id="player-bankroll"></span></p>
-          <p>Wins: <span id="player-wins"></span></p>
+          <p><span id="player-name"></span></p>
+          <p>Bankroll:<span id="player-bankroll"></span></p>
+          <p>Wins:<span id="player-wins"></span></p>
         </div>
       </section>
       <section id="user-controls">
-        <p id="message">Place your bet:</p>
+        <p id="message" class="press-start-2p-regular">Place your bet:</p>
         <div class="controls" id="betting-controls">
-          <button id="clear-bet">Clear</button>
-          <button class="chip" id="bet-5">5</button>
-          <button class="chip" id="bet-10">10</button>
-          <button class="chip" id="bet-25">25</button>
-          <button class="chip" id="bet-50">50</button>
-          <button class="chip" id="bet-100">100</button>
-          <button class="chip" id="bet-500">500</button>
-          <button id="deal-button">Deal</button>
+          <button id="clear-bet" class="press-start-2p-regular">Clear</button>
+          <button class="chip press-start-2p-regular" id="bet-5">5</button>
+          <button class="chip press-start-2p-regular" id="bet-10">10</button>
+          <button class="chip press-start-2p-regular" id="bet-25">25</button>
+          <button class="chip press-start-2p-regular" id="bet-50">50</button>
+          <button class="chip press-start-2p-regular" id="bet-100">100</button>
+          <button class="chip press-start-2p-regular" id="bet-500">500</button>
+          <button id="deal-button" class="press-start-2p-regular">Deal</button>
         </div>
         <div class="controls" id="game-controls" style="display:none">
-            <button id="split-button" disabled>Split</button>
-            <button id="hit-button">Hit</button>
-            <button id="stand-button">Stand</button>
-            <button id="double-button" disabled>Double</button>
+            <button class="press-start-2p-regular" id="split-button" disabled>Split</button>
+            <button class="press-start-2p-regular" id="hit-button">Hit</button>
+            <button class="press-start-2p-regular" id="stand-button">Stand</button>
+            <button class="press-start-2p-regular" id="double-button" disabled>Double</button>
         </div>
       </section>
     </main>
-    <footer>
-      <p>&copy; 2024. All rights reserved.</p>
-    </footer>
   </body>
 </html>
