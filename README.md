@@ -23,7 +23,7 @@ no money.
 
 One-on-one blackjack against the dealer, played with chips.
 
-- Blackjack pays 3 to 2.
+- Blackjack pays 6 to 5.
 - The dealer stands on all 17s and peeks for blackjack.
 - Insurance is offered when the dealer shows an Ace and pays 2 to 1.
 - Double down on any two-card hand, including after a split.
@@ -51,11 +51,10 @@ The dev server runs on <http://localhost:8080> with hot reloading.
 | `npm run build` | Create a production build in `dist/` |
 | `npm run preview` | Serve the production build locally |
 | `npm run clean` | Delete `dist/` |
-| `npm run dev-log` | Same as `dev`, plus an anonymous ping to `gryzor.co` (see below) |
-| `npm run build-log` | Same as `build`, plus the same ping |
+| `npm test` | Run the rules and strategy tests (Vitest) |
 | `npx tsc --noEmit` | Type check (there is no npm script for this) |
 
-There is no test runner or linter configured.
+Tests cover the rules in `src/game/logic/`. There is no linter configured.
 
 To deploy, upload the contents of `dist/` to any static web host. The build uses relative paths, so it works
 from a subdirectory.
@@ -82,13 +81,6 @@ The canvas is a fixed 1024×768 space scaled to fit the window, so all layout us
 
 Two `localStorage` keys are used: `blackjack3.training` (hands seen, hands correct, best streak) and
 `blackjack3.table` (balance, shoe size, starting bankroll). Clearing site data resets both.
-
-## About log.js
-
-`log.js` comes from the Phaser Vite template. `npm run dev-log` and `npm run build-log` run it, and it makes a
-single request to `gryzor.co`, a domain owned by Phaser Studio Inc. It sends the template name, whether the
-run was `dev` or `build`, and the Phaser version. Nothing else is collected. The plain `dev` and `build`
-commands do not run it.
 
 ## License
 

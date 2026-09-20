@@ -1,7 +1,7 @@
 import { GameObjects, Scene } from 'phaser';
 import { CHIPS } from '../logic/constants';
 import { chipFrame } from './atlas';
-import { FONT, TEX } from './theme';
+import { addChipLabel, TEX } from './theme';
 
 const CHIP_RISE = 6; // px each chip in a column lifts the next
 const MAX_PER_COLUMN = 8;
@@ -38,19 +38,9 @@ export class BetStack extends GameObjects.Container {
                 this.add(this.scene.add.image(x, -i * CHIP_RISE, TEX.sprites, chipFrame(chip)).setScale(SCALE));
             }
             // The art carries no value, so the top chip of each column is labelled like the chip buttons.
-            this.add(
-                this.scene.add
-                    .text(x, -(shown - 1) * CHIP_RISE + 2 * SCALE, `$${chip}`, { fontFamily: FONT, fontSize: `${Math.round(17 * SCALE)}px`, fontStyle: 'bold', color: '#ffffff', stroke: '#000000', strokeThickness: 4 })
-                    .setOrigin(0.5),
-            );
+            this.add(addChipLabel(this.scene, x, -(shown - 1) * CHIP_RISE + 2 * SCALE, `$${chip}`, Math.round(17 * SCALE)));
             // A tall column is capped in height; the count says how many there really are.
-            if (n > shown) {
-                this.add(
-                    this.scene.add
-                        .text(x, 34, `×${n}`, { fontFamily: FONT, fontSize: '16px', fontStyle: 'bold', color: '#ffffff', stroke: '#000000', strokeThickness: 4 })
-                        .setOrigin(0.5),
-                );
-            }
+            if (n > shown) this.add(addChipLabel(this.scene, x, 34, `×${n}`, 16));
         });
     }
 }

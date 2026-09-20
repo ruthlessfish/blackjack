@@ -34,11 +34,15 @@ export type Action = 'hit' | 'stand' | 'double' | 'split';
 export type MessageKind = Outcome | 'blackjack';
 
 /**
- * Why an action is or isn't offered. `unavailable` means the rules don't allow
- * it at all (so the control is hidden); `unaffordable` means the play exists
- * but the bankroll won't cover it (so the control is shown greyed out).
+ * Whether a control is offered. `unavailable` means it has no place right now
+ * (so the control is hidden); `disabled` means it exists but can't be used yet,
+ * say because the bankroll won't cover it or no bet is down (so it is shown
+ * greyed out); `ok` means it can be used.
  */
-export type Availability = 'ok' | 'unaffordable' | 'unavailable';
+export type Availability = 'ok' | 'disabled' | 'unavailable';
+
+/** Runs `fn` after `ms` and hands back a function that cancels it. */
+export type Scheduler = (fn: () => void, ms: number) => () => void;
 
 /** The message line. Part of the state so it can never desync from a render. */
 export interface MessageView {
@@ -46,7 +50,7 @@ export interface MessageView {
     kind?: MessageKind;
 }
 
-export interface HandView {
+export interface PlayerHandView {
     cards: CardView[];
     total: number;
     soft: boolean;
@@ -77,19 +81,19 @@ export interface ViewState {
     shoeTotal: number;
     /** Cards retired to the discard tray. Excludes cards still in play on the table. */
     shoeDiscarded: number;
-    playerHands: HandView[];
+    playerHands: PlayerHandView[];
     message: MessageView;
     settings: Settings;
     chips: ChipView[];
     can: {
-        deal: boolean;
-        hit: boolean;
-        stand: boolean;
+        deal: Availability;
+        clear: Availability;
+        hit: Availability;
+        stand: Availability;
         double: Availability;
         split: Availability;
-        insurance: boolean;
-        clear: boolean;
-        chips: boolean;
+        /** Both insurance buttons: take it or decline. */
+        insurance: Availability;
         /** Whether the round-scoped settings (shoe, bankroll) can be changed. */
         settings: boolean;
     };

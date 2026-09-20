@@ -1,8 +1,7 @@
 import type { Rank, Settings, Suit } from './types';
 
 export const STARTING_BALANCE = 500;
-export const MIN_BET = 5; // must match the smallest chip in CHIPS
-export const BLACKJACK_PAYOUT = 1.5; // 3:2
+export const BLACKJACK_PAYOUT = 1.2; // 6:5; a whole number for any bet that is a multiple of $5
 export const MAX_HANDS = 4;
 export const RESHUFFLE_FRACTION = 0.25; // reshuffle when fewer than this share of cards remain
 export const SWEEP_DELAY_MS = 3000; // how long a settled round stays on the table
@@ -10,6 +9,9 @@ export const TRAINING_DECKS = 6;
 
 /** Chip denominations on the table. */
 export const CHIPS: readonly number[] = [5, 25, 100];
+
+/** The smallest legal bet, and the balance below which the table is out of funds. */
+export const MIN_BET = Math.min(...CHIPS);
 
 /** Shoe sizes the settings panel offers; anything else is rejected. */
 export const DECK_OPTIONS: readonly number[] = [1, 2, 4, 6, 8];

@@ -13,8 +13,8 @@ everything runs in the browser and `localStorage` is the only persistence.
 - **Standard** — 1-on-1 blackjack vs the dealer, ported from `../blackjack2` minus its training features
   (no "ask dealer", strategy warnings, accuracy, or Hi-Lo count).
 
-Only `sprites.png`, `table.png` and `felt.png` from `public/assets` are used (`bg.png`, `logo.png` and
-`black-felt.png` are unused leftovers). Text uses a system font stack; there are no font files.
+`public/assets` holds just `sprites.png`, `table.png` and `felt.png`, and all three are used. Text uses a
+system font stack; there are no font files.
 
 ## Commands
 
@@ -24,15 +24,14 @@ npm run dev          # dev server on http://localhost:8080 with HMR
 npm run build        # production build to dist/
 npm run preview      # serve the production build locally
 npm run clean        # rm -rf dist
-npm run dev-log      # same as dev, plus the analytics ping
-npm run build-log    # same as build, plus the analytics ping
+npm test             # vitest run: the rules and strategy tests in src/game/logic/*.test.ts
 npx tsc --noEmit     # type check (there is no npm script for this)
 ```
 
-Only `dev-log` / `build-log` shell out to `log.js`, which sends an anonymous ping to `gryzor.co`
-(`package.json` name, dev-vs-build, Phaser version). The plain `dev` / `build` don't run it, so use those.
-
-There is no test runner and no linter configured. `tsc --noEmit` is the only static check. In dev,
+Tests are Vitest and cover `logic/` only (rules, settlement, the strategy chart, the shoe); there is no
+linter, and `tsc --noEmit` is the static check. `StandardGame` takes `{ saved, shoe, schedule }` options:
+a test passes a `shoe` to stack the cards (see `ScriptedShoe` in `StandardGame.test.ts`) and a `schedule`
+it winds by hand (`manualClock`) to control the auto-sweep; the scene passes Phaser's clock. In dev,
 `window.__phaser` is the Phaser `Game`, so a browser session can read state, e.g.
 `__phaser.scene.getScene('Standard').table.view()` or `getScene('Training').session.view()`.
 
@@ -56,7 +55,9 @@ space instead of reading real pixel dimensions.
 Rules and rendering are kept apart. **`src/game/logic/` has no Phaser imports**, so it can be bundled and
 soaked from Node; scenes only draw a view object and forward clicks (they never decide a rule).
 
-- `logic/` — `Card/Deck/Shoe/Hand/Player/Dealer/strategy` (ported from blackjack2), `StandardGame`
+- `logic/` — `Card/Deck/Shoe/Hand/Player/Dealer/strategy` (ported from blackjack2; `Hand` is just cards,
+  `PlayerHand` adds the bet and outcome, and `Player` changes its state only through named methods),
+  `StandardGame`
   (the rules controller; emits a `ViewState` through an `onChange` callback and exposes `view()` /
   `snapshot()` / `dispose()`), `TrainingSession` (deal, `answer()`, stats; exposes `TrainingView`),
   `settings.ts` (sanitising), `types.ts`, `constants.ts`.
@@ -64,7 +65,8 @@ soaked from Node; scenes only draw a view object and forward clicks (they never 
 - `scenes/` — `Preloader` → `MainMenu` → `Training` | `Standard`. `Preloader` loads the three images and
   cuts the sprite frames.
 - `ui/` — `Button`, `ChipButton`, `HandView` (diffs cards so only new ones animate, flips the hole card),
-  `Pile`, `BetStack`, `SettingsModal`, `atlas.ts` (frame names), `theme.ts` (colours, fonts, backgrounds).
+  `Pile`, `BetStack`, `SettingsModal`, `hud.ts` (the top-bar stat box and Menu button), `atlas.ts` (frame
+  names), `theme.ts` (colours, fonts, backgrounds, chip labels).
 
 ### Sprite sheet
 
@@ -76,8 +78,9 @@ is set on this texture only.
 
 ### Behaviour worth knowing
 
-- Standard saves `{balance, decks, startingBalance}` on **every** state change, so reloading mid-round
-  forfeits the bet rather than undoing it. Training saves after every answer.
+- Standard checks `{balance, decks, startingBalance}` on **every** state change and writes whenever they
+  differ from what was last saved, so reloading mid-round forfeits the bet rather than undoing it. Training
+  saves after every answer.
 - Training skips hands with no decision (player natural, or a dealer natural the peek would catch).
 - The best streak updates the moment the live streak passes it (blackjack2 only updated it on a miss).
 - The bankroll setting is a row of presets (`BANKROLL_OPTIONS`) because Phaser has no text input.
@@ -88,8 +91,8 @@ Two loading paths, and they behave differently at build time:
 
 - **Runtime loading (preferred here):** files in `public/assets/` are copied verbatim to `dist/assets/`.
   Scenes call `this.load.setPath('assets')` once in `preload()`, then load by bare filename
-  (`this.load.image('background', 'bg.png')`).
-- **Bundled:** `import logoImg from './assets/logo.png'` inside `src/` lets Vite hash and inline/emit
+  (`this.load.image('felt', 'felt.png')`).
+- **Bundled:** `import feltImg from './assets/felt.png'` inside `src/` lets Vite hash and inline/emit
   the file; pass the imported URL to the loader.
 
 ## TypeScript config notes

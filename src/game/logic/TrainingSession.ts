@@ -3,6 +3,7 @@ import { toCardView } from './card';
 import { Dealer } from './dealer';
 import { Hand } from './hand';
 import { Shoe } from './shoe';
+import { basicStrategy } from './strategy';
 import type { Action, SavedTraining, TrainingView } from './types';
 
 /** How each move is named in feedback text. */
@@ -13,6 +14,11 @@ const ACTION_NAME: Record<Action, string> = {
     split: 'split',
 };
 
+/** Share of hands answered correctly, 0-100, or null before the first hand. */
+export function accuracyPct(handsSeen: number, handsCorrect: number): number | null {
+    return handsSeen ? (handsCorrect / handsSeen) * 100 : null;
+}
+
 /**
  * One Basic Strategy drill: deal a hand, take a single move, score it.
  * Only the first move is ever played, so there is no hit, no dealer
@@ -20,7 +26,7 @@ const ACTION_NAME: Record<Action, string> = {
  */
 export class TrainingSession {
     private shoe = new Shoe(TRAINING_DECKS);
-    private player = new Hand(0);
+    private player = new Hand();
     private dealer = new Dealer();
     private feedback: TrainingView['feedback'] = null;
 
@@ -44,7 +50,7 @@ export class TrainingSession {
     deal(): void {
         do {
             if (this.shoe.needsReshuffle()) this.shoe.reset();
-            this.player = new Hand(0, [this.shoe.draw(), this.shoe.draw()]);
+            this.player = new Hand([this.shoe.draw(), this.shoe.draw()]);
             this.dealer.reset([this.shoe.draw(), this.shoe.draw()]);
         } while (this.player.isBlackjack || (this.dealer.shouldPeek && this.dealer.hand.isBlackjack));
         this.feedback = null;
@@ -59,7 +65,7 @@ export class TrainingSession {
         if (action === 'split' && !this.player.isPair) return false;
 
         // Bankroll is unlimited here, so double is always legal and split is legal for a pair.
-        const advised = this.dealer.advise(this.player, true, this.player.isPair);
+        const advised = basicStrategy(this.player, this.dealer.upCard, true, this.player.isPair);
         const correct = advised === action;
 
         this.handsSeen++;
@@ -121,7 +127,7 @@ export class TrainingSession {
             feedback: this.feedback,
             handsSeen: this.handsSeen,
             handsCorrect: this.handsCorrect,
-            accuracy: this.handsSeen ? (this.handsCorrect / this.handsSeen) * 100 : null,
+            accuracy: accuracyPct(this.handsSeen, this.handsCorrect),
             streak: this.streak,
             bestStreak: this.bestStreak,
         };

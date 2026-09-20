@@ -1,17 +1,12 @@
 import { Card } from './card';
 import type { Outcome } from './types';
 
+/** Cards and what they add up to: the dealer's hand, and the hand a drill deals the player. */
 export class Hand {
-    bet: number;
     cards: Card[];
-    readonly isSplitAces: boolean;
-    resolved = false; // player has finished acting on this hand
-    outcome?: Outcome;
 
-    constructor(bet: number, cards: Card[] = [], isSplitAces = false) {
-        this.bet = bet;
+    constructor(cards: Card[] = []) {
         this.cards = cards;
-        this.isSplitAces = isSplitAces;
     }
 
     add(card: Card): void {
@@ -54,5 +49,44 @@ export class Hand {
             aces--;
         }
         return { total, aces };
+    }
+}
+
+/** A hand the player has money on: it carries a bet, knows when the player is done with it, and how it ended. */
+export class PlayerHand extends Hand {
+    readonly isSplitAces: boolean;
+    private stake: number;
+    private finished = false;
+    private result?: Outcome;
+
+    constructor(bet: number, cards: Card[] = [], isSplitAces = false) {
+        super(cards);
+        this.stake = bet;
+        this.isSplitAces = isSplitAces;
+    }
+
+    get bet(): number {
+        return this.stake;
+    }
+
+    /** True once the player has finished acting on this hand. */
+    get resolved(): boolean {
+        return this.finished;
+    }
+
+    get outcome(): Outcome | undefined {
+        return this.result;
+    }
+
+    doubleBet(): void {
+        this.stake *= 2;
+    }
+
+    resolve(): void {
+        this.finished = true;
+    }
+
+    settle(outcome: Outcome): void {
+        this.result = outcome;
     }
 }

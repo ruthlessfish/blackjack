@@ -2,16 +2,17 @@ import { MainMenu } from './scenes/MainMenu';
 import { Preloader } from './scenes/Preloader';
 import { Standard } from './scenes/Standard';
 import { Training } from './scenes/Training';
+import { CANVAS_H, CANVAS_W, COLOR } from './ui/theme';
 import { AUTO, Game, Scale, Types } from 'phaser';
 
 // Find out more information about the Game Config at:
 // https://docs.phaser.io/api-documentation/typedef/types-core#gameconfig
 const config: Types.Core.GameConfig = {
     type: AUTO,
-    width: 1024,
-    height: 768,
+    width: CANVAS_W,
+    height: CANVAS_H,
     parent: 'game-container',
-    backgroundColor: '#0d2f1c',
+    backgroundColor: COLOR.felt,
     scale: {
         mode: Scale.FIT,
         autoCenter: Scale.CENTER_BOTH

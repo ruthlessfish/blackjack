@@ -1,8 +1,8 @@
 import { GameObjects, Scene } from 'phaser';
-import { BANKROLL_OPTIONS, DECK_OPTIONS } from '../logic/constants';
+import { BANKROLL_OPTIONS, DECK_OPTIONS, DEFAULT_SETTINGS } from '../logic/constants';
 import type { Settings } from '../logic/types';
 import { Button } from './Button';
-import { addText, CANVAS_H, CANVAS_W, COLOR, FONT_TITLE } from './theme';
+import { addText, CANVAS_H, CANVAS_W, COLOR, FONT_TITLE, HEX } from './theme';
 
 const PANEL_W = 640;
 const PANEL_H = 480;
@@ -13,7 +13,7 @@ const PANEL_H = 480;
  * Bankroll is a row of presets because Phaser has no text input.
  */
 export class SettingsModal extends GameObjects.Container {
-    private draft: Settings = { decks: 6, startingBalance: 500 };
+    private draft: Settings = { ...DEFAULT_SETTINGS };
     private readonly deckButtons: { value: number; button: Button }[] = [];
     private readonly bankrollButtons: { value: number; button: Button }[] = [];
     private readonly onSave: (next: Settings) => void;
@@ -28,8 +28,8 @@ export class SettingsModal extends GameObjects.Container {
             .setInteractive()
             .on('pointerup', () => this.close());
         const panel = scene.add.graphics();
-        panel.fillStyle(0x0d2f1c, 1).fillRoundedRect(-PANEL_W / 2, -PANEL_H / 2, PANEL_W, PANEL_H, 18);
-        panel.lineStyle(3, 0xf2c94c, 1).strokeRoundedRect(-PANEL_W / 2, -PANEL_H / 2, PANEL_W, PANEL_H, 18);
+        panel.fillStyle(HEX.felt, 1).fillRoundedRect(-PANEL_W / 2, -PANEL_H / 2, PANEL_W, PANEL_H, 18);
+        panel.lineStyle(3, HEX.gold, 1).strokeRoundedRect(-PANEL_W / 2, -PANEL_H / 2, PANEL_W, PANEL_H, 18);
         // A second interactive layer under the panel's own controls stops clicks on it from reaching the dimmer.
         const panelHit = scene.add.rectangle(0, 0, PANEL_W, PANEL_H, 0x000000, 0).setInteractive();
 
@@ -72,10 +72,6 @@ export class SettingsModal extends GameObjects.Container {
 
     close(): void {
         this.setVisible(false);
-    }
-
-    get isOpen(): boolean {
-        return this.visible;
     }
 
     private save(): void {

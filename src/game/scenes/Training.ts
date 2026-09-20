@@ -4,6 +4,7 @@ import type { Action } from '../logic/types';
 import { loadTraining, saveTraining } from '../storage';
 import { Button } from '../ui/Button';
 import { HandView } from '../ui/HandView';
+import { addMenuButton, addStatBox } from '../ui/hud';
 import { TEX, addFeltBackground, addText, CANVAS_W, COLOR } from '../ui/theme';
 
 /** A correct answer moves on by itself after this long; a wrong one waits for the player. */
@@ -63,13 +64,7 @@ export class Training extends Scene {
     // ---- Layout ------------------------------------------------------------
 
     private buildHud(): void {
-        new Button(this, 84, 40, {
-            label: 'Menu',
-            width: 120,
-            height: 44,
-            fontSize: 20,
-            onClick: () => this.scene.start('MainMenu'),
-        });
+        addMenuButton(this);
 
         const stats: { key: keyof Training['statValues']; label: string }[] = [
             { key: 'hands', label: 'HANDS' },
@@ -84,11 +79,14 @@ export class Training extends Scene {
         this.statValues = {} as Training['statValues'];
         stats.forEach((s, i) => {
             const cx = left + width / 2 + i * (width + gap);
-            const box = this.add.graphics();
-            box.fillStyle(0x000000, 0.35).fillRoundedRect(cx - width / 2, 12, width, 56, 10);
-            box.lineStyle(2, 0xf2c94c, s.key === 'best' ? 1 : 0.4).strokeRoundedRect(cx - width / 2, 12, width, 56, 10);
-            addText(this, cx, 26, s.label, { size: 12, color: COLOR.dim, bold: true });
-            this.statValues[s.key] = addText(this, cx, 49, '0', { size: 26, bold: true, color: s.key === 'best' ? COLOR.gold : COLOR.text });
+            const best = s.key === 'best';
+            this.statValues[s.key] = addStatBox(this, cx, s.label, {
+                width,
+                fillAlpha: 0.35,
+                borderAlpha: best ? 1 : 0.4,
+                valueColor: best ? COLOR.gold : COLOR.text,
+                value: '0',
+            });
         });
 
         this.resetButton = new Button(this, CANVAS_W - 84, 40, {

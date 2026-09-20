@@ -11,10 +11,19 @@ export class Shoe {
         this.reset();
     }
 
-    reset(): void {
+    /**
+     * Rebuild and shuffle the shoe. `inPlay` are cards still face-up on the
+     * table (a refill that lands mid-round), which are left out so no card can
+     * end up on the table twice.
+     */
+    reset(inPlay: readonly Card[] = []): void {
         this.cards = [];
         for (let d = 0; d < this.numDecks; d++) {
             this.cards.push(...new Deck().cards);
+        }
+        for (const held of inPlay) {
+            const i = this.cards.findIndex((c) => c.rank === held.rank && c.suit === held.suit);
+            if (i !== -1) this.cards.splice(i, 1);
         }
         this.shuffle();
     }

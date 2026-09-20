@@ -1,8 +1,9 @@
 import { Scene } from 'phaser';
 import { loadTable, loadTraining } from '../storage';
-import { DEFAULT_SETTINGS } from '../logic/constants';
+import { CHIPS, DEFAULT_SETTINGS } from '../logic/constants';
+import { accuracyPct } from '../logic/TrainingSession';
 import { Button } from '../ui/Button';
-import { CHIP_COLOR, chipFrame } from '../ui/atlas';
+import { chipFrame } from '../ui/atlas';
 import { addFeltBackground, addText, CANVAS_W, COLOR, FONT_TITLE, TEX } from '../ui/theme';
 
 export class MainMenu extends Scene {
@@ -26,9 +27,8 @@ export class MainMenu extends Scene {
 
         // The saved stats are read fresh each time the menu opens, so they are current after a session.
         const training = loadTraining();
-        const accuracy = training.handsSeen
-            ? `${Math.round((training.handsCorrect / training.handsSeen) * 100)}% correct`
-            : 'no hands yet';
+        const pct = accuracyPct(training.handsSeen, training.handsCorrect);
+        const accuracy = pct === null ? 'no hands yet' : `${Math.round(pct)}% correct`;
         const table = loadTable();
         const bankroll = table ? table.balance : DEFAULT_SETTINGS.startingBalance;
 
@@ -50,7 +50,7 @@ export class MainMenu extends Scene {
             onClick: () => this.scene.start('Standard'),
         });
 
-        addText(this, cx, 738, 'Blackjack pays 3 to 2  ·  Dealer stands on all 17s  ·  Insurance pays 2 to 1', {
+        addText(this, cx, 738, 'Blackjack pays 6 to 5  ·  Dealer stands on all 17s  ·  Insurance pays 2 to 1', {
             size: 16,
             color: COLOR.dim,
         });
@@ -67,9 +67,9 @@ export class MainMenu extends Scene {
         for (const c of fan) {
             this.add.image(c.x, c.y, TEX.sprites, c.frame).setScale(1.05).setAngle(c.angle);
         }
-        Object.keys(CHIP_COLOR).forEach((amount, i) => {
+        CHIPS.forEach((amount, i) => {
             this.add
-                .image(840 + i * 34, 646 - (i % 2) * 18, TEX.sprites, chipFrame(Number(amount)))
+                .image(840 + i * 34, 646 - (i % 2) * 18, TEX.sprites, chipFrame(amount))
                 .setScale(1.3)
                 .setAngle(i * 12 - 10);
         });

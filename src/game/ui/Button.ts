@@ -1,5 +1,5 @@
 import { GameObjects, Scene } from 'phaser';
-import { COLOR, FONT } from './theme';
+import { COLOR, FONT, HEX } from './theme';
 
 export interface ButtonOptions {
     label: string;
@@ -13,7 +13,7 @@ export interface ButtonOptions {
     onClick: () => void;
 }
 
-const FILL = { default: 0x1c5a34, primary: 0xf2c94c } as const;
+const FILL = { default: 0x1c5a34, primary: HEX.gold } as const;
 const FILL_HOVER = { default: 0x287a48, primary: 0xffdf7a } as const;
 const FILL_SELECTED = 0x3fae6a;
 const FILL_DISABLED = 0x2b3a31;
@@ -22,7 +22,6 @@ const FILL_DISABLED = 0x2b3a31;
 export class Button extends GameObjects.Container {
     private readonly bg: GameObjects.Graphics;
     private readonly title: GameObjects.Text;
-    private readonly sub: GameObjects.Text | null = null;
     private readonly opts: ButtonOptions;
     private enabled = true;
     private hovering = false;
@@ -48,14 +47,14 @@ export class Button extends GameObjects.Container {
         this.add([this.bg, this.title]);
 
         if (hasSub) {
-            this.sub = scene.add
+            const sub = scene.add
                 .text(0, opts.height * 0.24, opts.sublabel!, {
                     fontFamily: FONT,
                     fontSize: `${Math.round(size * 0.62)}px`,
                     color: primary ? COLOR.ink : COLOR.dim,
                 })
                 .setOrigin(0.5);
-            this.add(this.sub);
+            this.add(sub);
         }
 
         this.setSize(opts.width, opts.height);
@@ -89,11 +88,6 @@ export class Button extends GameObjects.Container {
         return this;
     }
 
-    setSublabel(text: string): this {
-        this.sub?.setText(text);
-        return this;
-    }
-
     private setHover(hovering: boolean): void {
         this.hovering = hovering && this.enabled;
         this.redraw();
@@ -110,7 +104,7 @@ export class Button extends GameObjects.Container {
         this.bg.fillStyle(0x000000, 0.35).fillRoundedRect(-width / 2 + 2, -height / 2 + 4, width, height, 12);
         this.bg.fillStyle(fill, 1).fillRoundedRect(-width / 2, -height / 2, width, height, 12);
         this.bg
-            .lineStyle(2, this.enabled ? 0xf2c94c : 0x55665b, this.selected ? 1 : 0.85)
+            .lineStyle(2, this.enabled ? HEX.gold : 0x55665b, this.selected ? 1 : 0.85)
             .strokeRoundedRect(-width / 2, -height / 2, width, height, 12);
         this.setAlpha(this.enabled ? 1 : 0.55);
     }

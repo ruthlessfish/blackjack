@@ -1,16 +1,17 @@
 import { GameObjects, Scene, Scenes } from 'phaser';
 import { CHIPS } from '../logic/constants';
 import { StandardGame } from '../logic/StandardGame';
-import type { Availability, ViewState } from '../logic/types';
+import type { Availability, PlayerHandView, ViewState } from '../logic/types';
 import { loadTable, saveTable } from '../storage';
 import { BACK_BLUE, BACK_RED, CARD_H } from '../ui/atlas';
 import { BetStack } from '../ui/BetStack';
 import { Button } from '../ui/Button';
 import { ChipButton } from '../ui/ChipButton';
 import { HandView } from '../ui/HandView';
+import { addMenuButton, addStatBox } from '../ui/hud';
 import { Pile } from '../ui/Pile';
 import { SettingsModal } from '../ui/SettingsModal';
-import { addTableBackground, addText, CANVAS_W, COLOR, scoreLabel } from '../ui/theme';
+import { addTableBackground, addText, CANVAS_W, COLOR, HEX, scoreLabel } from '../ui/theme';
 
 /** Where dealt cards slide in from: the shoe. */
 const SHOE = { x: 930, y: 160 };
@@ -59,6 +60,8 @@ export class Standard extends Scene {
     private discard!: Pile;
     private settings!: SettingsModal;
     private settingsButton!: Button;
+    /** The last snapshot written to storage, so an unchanged table is not written again. */
+    private lastSaved = '';
 
     private chipButtons: { amount: number; button: ChipButton }[] = [];
     private clearButton!: Button;
@@ -85,31 +88,32 @@ export class Standard extends Scene {
         this.buildControls();
         this.settings = new SettingsModal(this, (next) => this.table.applySettings(next));
 
-        this.table = new StandardGame((view) => this.render(view), loadTable() ?? undefined);
+        this.lastSaved = '';
+        this.table = new StandardGame(
+            (view) => {
+                this.persist();
+                this.render(view);
+            },
+            {
+                saved: loadTable() ?? undefined,
+                // The settled round is swept on the scene's clock, so it goes when the scene does.
+                schedule: (fn, ms) => {
+                    const timer = this.time.delayedCall(ms, fn);
+                    return () => timer.remove();
+                },
+            },
+        );
         this.events.once(Scenes.Events.SHUTDOWN, () => this.table.dispose());
+        this.persist();
         this.render(this.table.view());
     }
 
     // ---- Layout ------------------------------------------------------------
 
     private buildHud(): void {
-        new Button(this, 84, 40, {
-            label: 'Menu',
-            width: 120,
-            height: 44,
-            fontSize: 20,
-            onClick: () => this.scene.start('MainMenu'),
-        });
-
-        const box = (cx: number, label: string): GameObjects.Text => {
-            const g = this.add.graphics();
-            g.fillStyle(0x000000, 0.45).fillRoundedRect(cx - 80, 12, 160, 56, 10);
-            g.lineStyle(2, 0xf2c94c, 0.5).strokeRoundedRect(cx - 80, 12, 160, 56, 10);
-            addText(this, cx, 26, label, { size: 12, bold: true, color: COLOR.dim });
-            return addText(this, cx, 49, '', { size: 26, bold: true });
-        };
-        this.balanceText = box(CANVAS_W / 2 - 92, 'BALANCE');
-        this.betText = box(CANVAS_W / 2 + 92, 'BET');
+        addMenuButton(this);
+        this.balanceText = addStatBox(this, CANVAS_W / 2 - 92, 'BALANCE');
+        this.betText = addStatBox(this, CANVAS_W / 2 + 92, 'BET');
 
         this.settingsButton = new Button(this, CANVAS_W - 84, 40, {
             label: 'Settings',
@@ -140,8 +144,8 @@ export class Standard extends Scene {
     private buildControls(): void {
         const y = CONTROLS_Y;
 
-        [232, 322, 412].forEach((x, i) => {
-            const amount = CHIPS[i];
+        CHIPS.forEach((amount, i) => {
+            const x = 232 + i * 90;
             const button = new ChipButton(this, x, y, amount, 1.1, () => this.table.addBet(amount));
             this.chipButtons.push({ amount, button });
         });
@@ -187,10 +191,20 @@ export class Standard extends Scene {
 
     // ---- Rendering ---------------------------------------------------------
 
-    private render(v: ViewState): void {
-        // Saved on every change so a reload mid-round forfeits the bet rather than undoing it.
-        saveTable(this.table.snapshot());
+    /**
+     * Save the table after every change, so a reload mid-round forfeits the bet
+     * rather than undoing it. Most changes (a hit, a settled sweep) leave the
+     * saved fields alone, so only a real difference is written.
+     */
+    private persist(): void {
+        const snapshot = this.table.snapshot();
+        const text = JSON.stringify(snapshot);
+        if (text === this.lastSaved) return;
+        this.lastSaved = text;
+        saveTable(snapshot);
+    }
 
+    private render(v: ViewState): void {
         this.balanceText.setText(`$${v.balance}`).setColor(this.balanceColor(v));
         this.betText.setText(`$${v.betDisplay}`);
         this.shoe.set(v.shoeRemaining, v.shoeTotal, 'in shoe');
@@ -253,13 +267,13 @@ export class Standard extends Scene {
             if (h.active) {
                 const w = view.spanFor(h.cards.length) + 24;
                 this.activeMark
-                    .lineStyle(3, 0xf2c94c, 0.95)
+                    .lineStyle(3, HEX.gold, 0.95)
                     .strokeRoundedRect(xs[i] - w / 2, PLAYER_Y - cardH / 2 - 10, w, cardH + 20, 10);
             }
         });
     }
 
-    private handTitle(h: ViewState['playerHands'][number]): string {
+    private handTitle(h: PlayerHandView): string {
         let title = `${h.label}  ${scoreLabel(h.total, h.soft)}  ·  $${h.bet}`;
         if (h.blackjack) title += '  BLACKJACK!';
         else if (h.outcome === 'win') title += '  WIN';
@@ -268,7 +282,7 @@ export class Standard extends Scene {
         return title;
     }
 
-    private handColor(h: ViewState['playerHands'][number]): string {
+    private handColor(h: PlayerHandView): string {
         if (h.blackjack) return OUTCOME_COLOR.blackjack;
         if (h.outcome) return OUTCOME_COLOR[h.outcome];
         return h.active ? COLOR.gold : COLOR.text;
@@ -279,26 +293,19 @@ export class Standard extends Scene {
             const chip = v.chips.find((c) => c.amount === amount);
             button.setAvailability(chip ? chip.availability : 'unavailable');
         }
-        this.showButton(this.clearButton, v.can.chips, v.can.clear);
-        this.showButton(this.dealButton, v.can.chips, v.can.deal);
-
-        const playing = v.phase === 'player';
-        this.showButton(this.hitButton, playing, v.can.hit);
-        this.showButton(this.standButton, playing, v.can.stand);
+        this.showAvailability(this.clearButton, v.can.clear);
+        this.showAvailability(this.dealButton, v.can.deal);
+        this.showAvailability(this.hitButton, v.can.hit);
+        this.showAvailability(this.standButton, v.can.stand);
         this.showAvailability(this.doubleButton, v.can.double);
         this.showAvailability(this.splitButton, v.can.split);
-
-        this.showButton(this.insuranceYes, v.can.insurance, true);
-        this.showButton(this.insuranceNo, v.can.insurance, true);
+        this.showAvailability(this.insuranceYes, v.can.insurance);
+        this.showAvailability(this.insuranceNo, v.can.insurance);
 
         this.settingsButton.setEnabled(v.can.settings);
     }
 
-    private showButton(button: Button, visible: boolean, enabled: boolean): void {
-        button.setVisible(visible).setEnabled(enabled);
-    }
-
-    /** Impossible moves are hidden; legal-but-unaffordable ones are shown dimmed. */
+    /** Controls with no place right now are hidden; ones that exist but can't be used yet are shown dimmed. */
     private showAvailability(button: Button, a: Availability): void {
         button.setVisible(a !== 'unavailable').setEnabled(a === 'ok');
     }

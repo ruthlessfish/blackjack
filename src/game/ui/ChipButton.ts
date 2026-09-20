@@ -1,7 +1,7 @@
 import { GameObjects, Scene } from 'phaser';
 import type { Availability } from '../logic/types';
 import { chipFrame } from './atlas';
-import { FONT, TEX } from './theme';
+import { addChipLabel, TEX } from './theme';
 
 /** A betting chip: the chip art with its denomination drawn on top. */
 export class ChipButton extends GameObjects.Container {
@@ -13,16 +13,7 @@ export class ChipButton extends GameObjects.Container {
 
         this.art = scene.add.image(0, 0, TEX.sprites, chipFrame(amount)).setScale(scale);
         // Chips are photographed from above at an angle, so the face sits a little low of centre.
-        const label = scene.add
-            .text(0, 2 * scale, `$${amount}`, {
-                fontFamily: FONT,
-                fontSize: `${Math.round(17 * scale)}px`,
-                fontStyle: 'bold',
-                color: '#ffffff',
-                stroke: '#000000',
-                strokeThickness: 4,
-            })
-            .setOrigin(0.5);
+        const label = addChipLabel(scene, 0, 2 * scale, `$${amount}`, Math.round(17 * scale));
         this.add([this.art, label]);
 
         this.setSize(this.art.displayWidth, this.art.displayHeight);
@@ -35,7 +26,7 @@ export class ChipButton extends GameObjects.Container {
         scene.add.existing(this);
     }
 
-    /** `unavailable` hides the chip; `unaffordable` shows it dimmed. */
+    /** `unavailable` hides the chip; `disabled` shows it dimmed. */
     setAvailability(availability: Availability): this {
         this.setVisible(availability !== 'unavailable');
         this.enabled = availability === 'ok';

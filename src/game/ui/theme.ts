@@ -21,6 +21,14 @@ export const COLOR = {
     lose: '#ff8a8a',
     push: '#ffe08a',
     ink: '#10281a',
+    /** The deep green behind everything: the canvas background and the modal panel. */
+    felt: '#0d2f1c',
+} as const;
+
+/** The same colours as numbers, because Graphics fills and strokes take `0xRRGGBB`, not CSS strings. */
+export const HEX = {
+    gold: 0xf2c94c,
+    felt: 0x0d2f1c,
 } as const;
 
 /** Green multiply tint that turns the grey felt.png into a table-green. */
@@ -73,6 +81,20 @@ export function addText(
             strokeThickness: opts.stroke ? Math.max(2, Math.round(size / 8)) : 0,
         })
         .setOrigin(opts.originX ?? 0.5, 0.5);
+}
+
+/** A chip's denomination (or a count) drawn over chip art: bold white with a black outline. */
+export function addChipLabel(scene: Scene, x: number, y: number, text: string, size: number): GameObjects.Text {
+    return scene.add
+        .text(x, y, text, {
+            fontFamily: FONT,
+            fontSize: `${size}px`,
+            fontStyle: 'bold',
+            color: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 4,
+        })
+        .setOrigin(0.5);
 }
 
 /** "12/22" for a soft hand, "17" otherwise. A soft 21 is just 21. */

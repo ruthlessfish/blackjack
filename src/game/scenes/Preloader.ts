@@ -1,6 +1,6 @@
 import { Scene } from 'phaser';
 import { registerSpriteFrames } from '../ui/atlas';
-import { addText, CANVAS_H, CANVAS_W, COLOR, TEX } from '../ui/theme';
+import { addText, CANVAS_H, CANVAS_W, COLOR, HEX, TEX } from '../ui/theme';
 
 /** Loads the three image assets once, cuts the sprite frames, then hands over to the menu. */
 export class Preloader extends Scene {
@@ -9,14 +9,14 @@ export class Preloader extends Scene {
     }
 
     preload() {
-        this.cameras.main.setBackgroundColor('#0d2f1c');
+        this.cameras.main.setBackgroundColor(COLOR.felt);
 
         const barW = 360;
         const cx = CANVAS_W / 2;
         const cy = CANVAS_H / 2;
         addText(this, cx, cy - 40, 'Shuffling…', { size: 26, color: COLOR.gold, bold: true });
-        this.add.rectangle(cx, cy, barW, 14, 0x000000, 0.4).setStrokeStyle(2, 0xf2c94c);
-        const fill = this.add.rectangle(cx - barW / 2, cy, 0, 10, 0xf2c94c).setOrigin(0, 0.5);
+        this.add.rectangle(cx, cy, barW, 14, 0x000000, 0.4).setStrokeStyle(2, HEX.gold);
+        const fill = this.add.rectangle(cx - barW / 2, cy, 0, 10, HEX.gold).setOrigin(0, 0.5);
         this.load.on('progress', (p: number) => fill.setSize(barW * p, 10));
 
         this.load.setPath('assets');

@@ -1,5 +1,6 @@
 import { Scene, Textures } from 'phaser';
-import type { CardView, Rank, Suit } from '../logic/types';
+import { RANKS } from '../logic/constants';
+import type { CardView, Suit } from '../logic/types';
 import { TEX } from './theme';
 
 /** Native size of one card frame in sprites.png. */
@@ -8,7 +9,6 @@ export const CARD_H = 124;
 
 /** sprites.png lists suits as spades, hearts, clubs, diamonds; the game's SUITS order differs. */
 const SUIT_ROW: Record<Suit, number> = { '♠': 0, '♥': 1, '♣': 2, '♦': 3 };
-const RANKS: Rank[] = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 
 /** The last row of the card area: four card backs and a blank stack, then the chips to the right. */
 const BACKS_Y = 496;
