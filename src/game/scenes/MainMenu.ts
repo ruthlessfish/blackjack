@@ -50,10 +50,11 @@ export class MainMenu extends Scene {
             onClick: () => this.scene.start('Standard'),
         });
 
-        addText(this, cx, 738, 'Blackjack pays 6 to 5  ·  Dealer stands on all 17s  ·  Insurance pays 2 to 1', {
+        addText(this, cx, 568, 'Blackjack pays 6 to 5  ·  Dealer stands on all 17s  ·  Insurance pays 2 to 1', {
             size: 16,
             color: COLOR.dim,
         });
+        addText(this, cx, 752, '© 2026 Shane Pearson. All rights reserved.', { size: 13, color: COLOR.dim });
     }
 
     /** A fan of cards and a few chips, cut from the same sprite sheet as the game. */
