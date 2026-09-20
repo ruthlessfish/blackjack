@@ -13,8 +13,9 @@ everything runs in the browser and `localStorage` is the only persistence.
 - **Standard** — 1-on-1 blackjack vs the dealer, ported from `../blackjack2` minus its training features
   (no "ask dealer", strategy warnings, accuracy, or Hi-Lo count).
 
-`public/assets` holds just `sprites.png`, `table.png` and `felt.png`, and all three are used. Text uses a
-system font stack; there are no font files.
+Only `sprites.png` and `felt.png` from `public/assets` are loaded; every screen, Standard included, sits on
+the tinted `felt.png` (`table.png` is an unused leftover). Text uses a system font stack; there are no font
+files.
 
 ## Commands
 
@@ -62,7 +63,7 @@ soaked from Node; scenes only draw a view object and forward clicks (they never 
   `snapshot()` / `dispose()`), `TrainingSession` (deal, `answer()`, stats; exposes `TrainingView`),
   `settings.ts` (sanitising), `types.ts`, `constants.ts`.
 - `storage.ts` — the only `localStorage` access; every read/write is in try/catch and sanitised on load.
-- `scenes/` — `Preloader` → `MainMenu` → `Training` | `Standard`. `Preloader` loads the three images and
+- `scenes/` — `Preloader` → `MainMenu` → `Training` | `Standard`. `Preloader` loads the two images and
   cuts the sprite frames.
 - `ui/` — `Button`, `ChipButton`, `HandView` (diffs cards so only new ones animate, flips the hole card),
   `Pile`, `BetStack`, `SettingsModal`, `hud.ts` (the top-bar stat box and Menu button), `atlas.ts` (frame

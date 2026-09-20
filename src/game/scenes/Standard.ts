@@ -11,7 +11,7 @@ import { HandView } from '../ui/HandView';
 import { addMenuButton, addStatBox } from '../ui/hud';
 import { Pile } from '../ui/Pile';
 import { SettingsModal } from '../ui/SettingsModal';
-import { addTableBackground, addText, CANVAS_W, COLOR, HEX, scoreLabel } from '../ui/theme';
+import { addFeltBackground, addText, CANVAS_W, COLOR, HEX, scoreLabel } from '../ui/theme';
 
 /** Where dealt cards slide in from: the shoe. */
 const SHOE = { x: 930, y: 160 };
@@ -82,7 +82,7 @@ export class Standard extends Scene {
         this.playerTitles = [];
         this.chipButtons = [];
 
-        addTableBackground(this);
+        addFeltBackground(this);
         this.buildHud();
         this.buildTable();
         this.buildControls();
@@ -104,8 +104,31 @@ export class Standard extends Scene {
             },
         );
         this.events.once(Scenes.Events.SHUTDOWN, () => this.table.dispose());
+        this.bindKeys();
         this.persist();
         this.render(this.table.view());
+    }
+
+    /**
+     * Keyboard play. Each key just forwards to the table, which ignores a move that is not legal
+     * right now, so the only guards here are for things the table cannot see: a held key, and the
+     * settings panel being open in front of it.
+     */
+    private bindKeys(): void {
+        const keyboard = this.input.keyboard!;
+        const bind = (key: string, act: () => void): void => {
+            keyboard.on(`keydown-${key}`, (event: KeyboardEvent) => {
+                if (!event.repeat && !this.settings.isOpen) act();
+            });
+        };
+        bind('H', () => this.table.hit());
+        bind('S', () => this.table.stand());
+        bind('D', () => this.table.double());
+        bind('P', () => this.table.split());
+        bind('Y', () => this.table.takeInsurance());
+        bind('N', () => this.table.declineInsurance());
+        bind('SPACE', () => this.table.deal());
+        bind('ENTER', () => this.table.deal());
     }
 
     // ---- Layout ------------------------------------------------------------
@@ -242,6 +265,13 @@ export class Standard extends Scene {
         const n = v.playerHands.length;
         const { xs, scale } = playerSlots(n);
 
+        // A split adds one hand. The half it splits off, and any hands pushed along after it, slide
+        // over from where they sat rather than being dealt from the shoe again. The split-off half is
+        // the first hand after the first that holds a single card.
+        const before = this.playerHands.map((view) => ({ x: view.x, y: view.y }));
+        const splitAt =
+            n === before.length + 1 ? v.playerHands.findIndex((h, i) => i > 0 && h.cards.length === 1) : -1;
+
         while (this.playerHands.length > n) {
             this.playerHands.pop()!.destroy();
             this.playerTitles.pop()!.destroy();
@@ -258,7 +288,7 @@ export class Standard extends Scene {
             const view = this.playerHands[i];
             view.setCardScale(scale);
             view.setPosition(xs[i], PLAYER_Y);
-            view.setCards(h.cards, SHOE);
+            view.setCards(h.cards, splitAt >= 0 && i >= splitAt ? before[i - 1] : SHOE);
 
             const title = this.playerTitles[i];
             title.setPosition(xs[i], PLAYER_Y - cardH / 2 - 24);

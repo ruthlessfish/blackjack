@@ -4,18 +4,16 @@
   "version": "1.4.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/phaserjs/template-vite-ts.git"
+    "url": "git+https://github.com/ruthlessfish/blackjack.git"
   },
-  "author": "Phaser Studio <support@phaser.io> (https://phaser.io/)",
+  "author": "Shane Pearson <bubbafoley@gmail.com>",
   "license": "MIT",
   "licenseUrl": "http://www.opensource.org/licenses/mit-license.php",
   "bugs": {
-    "url": "https://github.com/phaserjs/template-vite-ts/issues"
+    "url": "https://github.com/ruthlessfish/blackjack/issues"
   },
-  "homepage": "https://github.com/phaserjs/template-vite-ts#readme",
+  "homepage": "https://github.com/ruthlessfish/blackjack#readme",
   "scripts": {
-    "dev-log": "node log.js dev & vite --config vite/config.dev.mjs",
-    "build-log": "node log.js build & vite build --config vite/config.prod.mjs",
     "dev": "vite --config vite/config.dev.mjs",
     "build": "vite build --config vite/config.prod.mjs",
     "clean": "rm -rf dist",

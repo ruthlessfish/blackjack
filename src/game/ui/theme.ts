@@ -6,7 +6,6 @@ export const CANVAS_H = 768;
 /** Texture keys, registered once by the Preloader. */
 export const TEX = {
     sprites: 'sprites',
-    table: 'table',
     felt: 'felt',
 } as const;
 
@@ -34,19 +33,11 @@ export const HEX = {
 /** Green multiply tint that turns the grey felt.png into a table-green. */
 export const FELT_TINT = 0x3fae6a;
 
-/** A grey-felt tile with a green tint, for screens that are not the table itself. */
+/** The background of every screen: a grey-felt tile with a green tint. */
 export function addFeltBackground(scene: Scene): GameObjects.TileSprite {
     return scene.add
         .tileSprite(CANVAS_W / 2, CANVAS_H / 2, CANVAS_W, CANVAS_H, TEX.felt)
         .setTint(FELT_TINT)
-        .setDepth(-10);
-}
-
-/** The gameplay table. Both are 4:3, so the scale is uniform. */
-export function addTableBackground(scene: Scene): GameObjects.Image {
-    return scene.add
-        .image(CANVAS_W / 2, CANVAS_H / 2, TEX.table)
-        .setDisplaySize(CANVAS_W, CANVAS_H)
         .setDepth(-10);
 }
 

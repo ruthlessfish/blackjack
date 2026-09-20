@@ -1,4 +1,5 @@
 import { GameObjects, Scene } from 'phaser';
+import { bindClick } from './click';
 import { COLOR, FONT, HEX } from './theme';
 
 export interface ButtonOptions {
@@ -61,9 +62,7 @@ export class Button extends GameObjects.Container {
         this.setInteractive({ useHandCursor: true });
         this.on('pointerover', () => this.setHover(true));
         this.on('pointerout', () => this.setHover(false));
-        this.on('pointerup', () => {
-            if (this.enabled && this.visible) opts.onClick();
-        });
+        bindClick(this, () => this.enabled && this.visible, opts.onClick);
 
         this.redraw();
         scene.add.existing(this);

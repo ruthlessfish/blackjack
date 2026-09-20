@@ -4,6 +4,8 @@ import { CARD_W, cardFrame } from './atlas';
 import { TEX } from './theme';
 
 const DEAL_MS = 260;
+/** Gap between cards that are dealt in the same render. */
+const DEAL_STAGGER_MS = 280;
 const SHIFT_MS = 140;
 const FLIP_MS = 110;
 
@@ -40,11 +42,14 @@ export class HandView extends GameObjects.Container {
 
     /** Take every card off the table, so the next `setCards` deals them all in fresh. */
     clear(): void {
-        for (const s of this.shown) {
-            this.scene.tweens.killTweensOf(s.img);
-            s.img.destroy();
-        }
+        for (const s of this.shown) this.drop(s.img);
         this.shown = [];
+    }
+
+    /** Remove a card for good. Its tweens go first, so none is left running against a destroyed image. */
+    private drop(img: GameObjects.Image): void {
+        this.scene.tweens.killTweensOf(img);
+        img.destroy();
     }
 
     /** Resize the cards already showing; the next `setCards` re-slots them. */
@@ -59,7 +64,11 @@ export class HandView extends GameObjects.Container {
         const count = cards.length;
 
         // Anything past the new length is gone (a swept table).
-        while (this.shown.length > count) this.shown.pop()!.img.destroy();
+        while (this.shown.length > count) this.drop(this.shown.pop()!.img);
+
+        // Several cards can arrive in one call (the dealer drawing to 17). They come one after
+        // another, and only once a hole card has finished turning over.
+        let wait = 0;
 
         for (let i = 0; i < count; i++) {
             const target = this.slotX(i, count);
@@ -75,24 +84,28 @@ export class HandView extends GameObjects.Container {
                 this.flip(existing.img, keys[i], target);
                 existing.key = keys[i];
                 existing.x = target;
+                wait = 2 * FLIP_MS;
                 continue;
             }
 
-            existing?.img.destroy();
+            if (existing) this.drop(existing.img);
             const img = this.scene.add.image(target, 0, TEX.sprites, keys[i]).setScale(this.cardScale);
             this.add(img);
             this.shown[i] = { key: keys[i], img, x: target };
 
             if (dealFrom) {
-                img.setPosition(dealFrom.x - this.x, dealFrom.y - this.y).setAlpha(0.2);
+                // Hidden until its turn, so it does not sit on the shoe while the others land.
+                img.setPosition(dealFrom.x - this.x, dealFrom.y - this.y).setAlpha(wait > 0 ? 0 : 0.2);
                 this.scene.tweens.add({
                     targets: img,
                     x: target,
                     y: 0,
                     alpha: 1,
+                    delay: wait,
                     duration: DEAL_MS,
                     ease: 'Cubic.easeOut',
                 });
+                wait += DEAL_STAGGER_MS;
             }
         }
     }
@@ -112,8 +125,9 @@ export class HandView extends GameObjects.Container {
 
     /** Turn a face-down card over: squash to nothing, swap the frame, expand. */
     private flip(img: GameObjects.Image, frame: string, x: number): void {
+        // A card still flying in is finished off first, so it cannot be left mid-air or faded.
         this.scene.tweens.killTweensOf(img);
-        img.setX(x);
+        img.setPosition(x, 0).setAlpha(1);
         this.scene.tweens.add({
             targets: img,
             scaleX: 0,

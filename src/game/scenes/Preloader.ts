@@ -21,7 +21,6 @@ export class Preloader extends Scene {
 
         this.load.setPath('assets');
         this.load.image(TEX.sprites, 'sprites.png');
-        this.load.image(TEX.table, 'table.png');
         this.load.image(TEX.felt, 'felt.png');
     }
 

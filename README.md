@@ -29,6 +29,8 @@ One-on-one blackjack against the dealer, played with chips.
 - Double down on any two-card hand, including after a split.
 - Split pairs up to four hands; split Aces get one card each.
 - The shoe is reshuffled when a quarter of it is left.
+- Keyboard play: `H` hit, `S` stand, `D` double, `P` split, `Y` / `N` take or decline insurance, and
+  `Space` or `Enter` to deal.
 - The settings panel sets the shoe size (1, 2, 4, 6 or 8 decks) and the starting bankroll ($100 to $5000).
   The default is 6 decks and $500.
 

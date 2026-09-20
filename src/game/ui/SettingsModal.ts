@@ -2,6 +2,7 @@ import { GameObjects, Scene } from 'phaser';
 import { BANKROLL_OPTIONS, DECK_OPTIONS, DEFAULT_SETTINGS } from '../logic/constants';
 import type { Settings } from '../logic/types';
 import { Button } from './Button';
+import { bindClick } from './click';
 import { addText, CANVAS_H, CANVAS_W, COLOR, FONT_TITLE, HEX } from './theme';
 
 const PANEL_W = 640;
@@ -23,10 +24,8 @@ export class SettingsModal extends GameObjects.Container {
         this.onSave = onSave;
 
         // The dimmer swallows clicks so nothing behind the panel is reachable; clicking it cancels.
-        const dim = scene.add
-            .rectangle(0, 0, CANVAS_W, CANVAS_H, 0x000000, 0.6)
-            .setInteractive()
-            .on('pointerup', () => this.close());
+        const dim = scene.add.rectangle(0, 0, CANVAS_W, CANVAS_H, 0x000000, 0.6).setInteractive();
+        bindClick(dim, () => true, () => this.close());
         const panel = scene.add.graphics();
         panel.fillStyle(HEX.felt, 1).fillRoundedRect(-PANEL_W / 2, -PANEL_H / 2, PANEL_W, PANEL_H, 18);
         panel.lineStyle(3, HEX.gold, 1).strokeRoundedRect(-PANEL_W / 2, -PANEL_H / 2, PANEL_W, PANEL_H, 18);
@@ -72,6 +71,11 @@ export class SettingsModal extends GameObjects.Container {
 
     close(): void {
         this.setVisible(false);
+    }
+
+    /** The scene checks this so a key press does not act on the table behind the panel. */
+    get isOpen(): boolean {
+        return this.visible;
     }
 
     private save(): void {
