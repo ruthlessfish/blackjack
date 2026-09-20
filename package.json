@@ -1,6 +1,6 @@
 {
-  "name": "template-vite-ts",
-  "description": "A Phaser 3 TypeScript template using Vite.",
+  "name": "blackjack3",
+  "description": "Blackjack with Training and Standard modes, built with Phaser and Vite.",
   "version": "1.4.0",
   "repository": {
     "type": "git",
@@ -14,10 +14,12 @@
   },
   "homepage": "https://github.com/phaserjs/template-vite-ts#readme",
   "scripts": {
-    "dev": "node log.js dev & vite --config vite/config.dev.mjs",
-    "build": "node log.js build & vite build --config vite/config.prod.mjs",
-    "dev-nolog": "vite --config vite/config.dev.mjs",
-    "build-nolog": "vite build --config vite/config.prod.mjs"
+    "dev-log": "node log.js dev & vite --config vite/config.dev.mjs",
+    "build-log": "node log.js build & vite build --config vite/config.prod.mjs",
+    "dev": "vite --config vite/config.dev.mjs",
+    "build": "vite build --config vite/config.prod.mjs",
+    "clean": "rm -rf dist",
+    "preview": "vite preview --config vite/config.prod.mjs"
   },
   "devDependencies": {
     "typescript": "~5.7.2",

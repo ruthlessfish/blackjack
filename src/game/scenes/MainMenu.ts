@@ -1,0 +1,77 @@
+import { Scene } from 'phaser';
+import { loadTable, loadTraining } from '../storage';
+import { DEFAULT_SETTINGS } from '../logic/constants';
+import { Button } from '../ui/Button';
+import { CHIP_COLOR, chipFrame } from '../ui/atlas';
+import { addFeltBackground, addText, CANVAS_W, COLOR, FONT_TITLE, TEX } from '../ui/theme';
+
+export class MainMenu extends Scene {
+    constructor() {
+        super('MainMenu');
+    }
+
+    create() {
+        addFeltBackground(this);
+        this.decorate();
+
+        const cx = CANVAS_W / 2;
+        addText(this, cx, 150, 'Blackjack', {
+            size: 88,
+            bold: true,
+            font: FONT_TITLE,
+            color: COLOR.gold,
+            stroke: true,
+        });
+        addText(this, cx, 222, 'Pick a mode', { size: 24, color: COLOR.text, stroke: true });
+
+        // The saved stats are read fresh each time the menu opens, so they are current after a session.
+        const training = loadTraining();
+        const accuracy = training.handsSeen
+            ? `${Math.round((training.handsCorrect / training.handsSeen) * 100)}% correct`
+            : 'no hands yet';
+        const table = loadTable();
+        const bankroll = table ? table.balance : DEFAULT_SETTINGS.startingBalance;
+
+        new Button(this, cx, 350, {
+            label: 'Training',
+            sublabel: `Drill Basic Strategy  ·  best streak ${training.bestStreak}  ·  ${accuracy}`,
+            width: 680,
+            height: 108,
+            fontSize: 38,
+            variant: 'primary',
+            onClick: () => this.scene.start('Training'),
+        });
+        new Button(this, cx, 490, {
+            label: 'Standard',
+            sublabel: `Play against the dealer  ·  bankroll $${bankroll}`,
+            width: 680,
+            height: 108,
+            fontSize: 38,
+            onClick: () => this.scene.start('Standard'),
+        });
+
+        addText(this, cx, 738, 'Blackjack pays 3 to 2  ·  Dealer stands on all 17s  ·  Insurance pays 2 to 1', {
+            size: 16,
+            color: COLOR.dim,
+        });
+    }
+
+    /** A fan of cards and a few chips, cut from the same sprite sheet as the game. */
+    private decorate(): void {
+        // Kept below the buttons and clear of the footer line, in the two bottom corners.
+        const fan: { frame: string; x: number; y: number; angle: number }[] = [
+            { frame: 'A♠', x: 110, y: 640, angle: -14 },
+            { frame: 'K♥', x: 150, y: 634, angle: 0 },
+            { frame: 'Q♦', x: 190, y: 640, angle: 14 },
+        ];
+        for (const c of fan) {
+            this.add.image(c.x, c.y, TEX.sprites, c.frame).setScale(1.05).setAngle(c.angle);
+        }
+        Object.keys(CHIP_COLOR).forEach((amount, i) => {
+            this.add
+                .image(840 + i * 34, 646 - (i % 2) * 18, TEX.sprites, chipFrame(Number(amount)))
+                .setScale(1.3)
+                .setAngle(i * 12 - 10);
+        });
+    }
+}
