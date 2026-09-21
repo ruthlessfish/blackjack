@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { Card } from './card';
-import { Shoe } from './shoe';
+import { Card } from 'game/logic/card';
+import { Shoe } from '@/game/logic/shoe';
 
 describe('Shoe', () => {
     it('holds 52 cards a deck', () => {

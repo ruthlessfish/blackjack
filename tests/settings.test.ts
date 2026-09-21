@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SETTINGS } from './constants';
-import { parseBankroll, parseDecks, sanitizeSavedTable, sanitizeSettings } from './settings';
+import { DEFAULT_SETTINGS } from '@/game/logic/constants';
+import { parseBankroll, parseDecks, sanitizeSavedTable, sanitizeSettings } from '@/game/logic/settings';
 
 describe('parseDecks', () => {
     it.each([

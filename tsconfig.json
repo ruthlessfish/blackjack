@@ -1,5 +1,6 @@
 {
     "compilerOptions": {
+        "baseUrl": "./",
         "target": "ES2020",
         "useDefineForClassFields": true,
         "module": "ESNext",
@@ -21,9 +22,15 @@
         "noUnusedLocals": true,
         "noUnusedParameters": true,
         "noFallthroughCasesInSwitch": true,
-        "noUncheckedSideEffectImports": true
+        "noUncheckedSideEffectImports": true,
+        "paths": {
+            "@/*": [
+                "src/*"
+            ]
+        }
     },
     "include": [
-        "src"
+        "src",
+        "tests"
     ]
 }

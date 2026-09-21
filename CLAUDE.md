@@ -25,7 +25,7 @@ npm run dev          # dev server on http://localhost:8080 with HMR
 npm run build        # production build to dist/
 npm run preview      # serve the production build locally
 npm run clean        # rm -rf dist
-npm test             # vitest run: the rules and strategy tests in src/game/logic/*.test.ts
+npm test             # vitest run: the rules and strategy tests in tests/*.test.ts
 npx tsc --noEmit     # type check (there is no npm script for this)
 ```
 

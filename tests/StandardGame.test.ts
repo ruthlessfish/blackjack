@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { Card } from './card';
-import { Shoe } from './shoe';
-import { StandardGame } from './StandardGame';
-import type { Rank, SavedTable, Scheduler } from './types';
+import { Card } from '@/game/logic/card';
+import { Shoe } from '@/game/logic/shoe';
+import { StandardGame } from '@/game/logic/StandardGame';
+import type { Rank, SavedTable, Scheduler } from '@/game/logic/types';
 
 /** A shoe that deals the scripted ranks first, then falls back to a real shuffle. */
 class ScriptedShoe extends Shoe {

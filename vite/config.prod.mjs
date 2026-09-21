@@ -1,4 +1,8 @@
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { defineConfig } from 'vite';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const phasermsg = () => {
     return {
@@ -10,14 +14,19 @@ const phasermsg = () => {
             const line = "---------------------------------------------------------";
             const msg = `❤️❤️❤️ Tell us about your game! - games@phaser.io ❤️❤️❤️`;
             process.stdout.write(`${line}\n${msg}\n${line}\n`);
-            
+
             process.stdout.write(`✨ Done ✨\n`);
         }
     }
-}   
+}
 
 export default defineConfig({
     base: './',
+    resolve: {
+        alias: {
+            '@': path.resolve(__dirname, '../src'),
+        }
+    },
     logLevel: 'warning',
     build: {
         rollupOptions: {

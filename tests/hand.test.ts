@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { Card } from './card';
-import { Hand, PlayerHand } from './hand';
-import type { Rank } from './types';
+import { Card } from '@/game/logic/card';
+import { Hand, PlayerHand } from '@/game/logic/hand';
+import type { Rank } from '@/game/logic/types';
 
 const cards = (...ranks: Rank[]) => ranks.map((r) => new Card(r, '♠'));
 
