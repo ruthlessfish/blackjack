@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Card } from 'game/logic/card';
+import { Card } from '@/game/logic/card';
 import { Shoe } from '@/game/logic/shoe';
 
 describe('Shoe', () => {
