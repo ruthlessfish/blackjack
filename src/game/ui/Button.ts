@@ -23,6 +23,7 @@ const FILL_DISABLED = 0x2b3a31;
 export class Button extends GameObjects.Container {
     private readonly bg: GameObjects.Graphics;
     private readonly title: GameObjects.Text;
+    private readonly sub: GameObjects.Text | null = null;
     private readonly opts: ButtonOptions;
     private enabled = true;
     private hovering = false;
@@ -48,14 +49,14 @@ export class Button extends GameObjects.Container {
         this.add([this.bg, this.title]);
 
         if (hasSub) {
-            const sub = scene.add
+            this.sub = scene.add
                 .text(0, opts.height * 0.24, opts.sublabel!, {
                     fontFamily: FONT,
                     fontSize: `${Math.round(size * 0.62)}px`,
                     color: primary ? COLOR.ink : COLOR.dim,
                 })
                 .setOrigin(0.5);
-            this.add(sub);
+            this.add(this.sub);
         }
 
         this.setSize(opts.width, opts.height);
@@ -84,6 +85,12 @@ export class Button extends GameObjects.Container {
 
     setLabel(label: string): this {
         this.title.setText(label);
+        return this;
+    }
+
+    /** Only for a button built with a sublabel; one without has no line to change. */
+    setSublabel(sublabel: string): this {
+        this.sub?.setText(sublabel);
         return this;
     }
 

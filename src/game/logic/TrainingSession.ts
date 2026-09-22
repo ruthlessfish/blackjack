@@ -1,4 +1,4 @@
-import { TRAINING_DECKS } from './constants';
+import { ASK_RECHARGE_HANDS, TRAINING_DECKS } from './constants';
 import { toCardView } from './card';
 import { Dealer } from './dealer';
 import { Hand } from './hand';
@@ -25,17 +25,23 @@ export function accuracyPct(handsSeen: number, handsCorrect: number): number | n
  * play-out and no money. Like `StandardGame`, it knows nothing of Phaser.
  */
 export class TrainingSession {
-    private shoe = new Shoe(TRAINING_DECKS);
+    private shoe: Shoe;
     private player = new Hand();
     private dealer = new Dealer();
     private feedback: TrainingView['feedback'] = null;
+    /** The play the dealer revealed for this hand, which takes it out of the stats. */
+    private dealerSays: Action | null = null;
+    /** Hands still to play before the dealer can be asked again. */
+    private recharge = 0;
 
     private handsSeen: number;
     private handsCorrect: number;
     private streak = 0;
     private bestStreak: number;
 
-    constructor(saved: SavedTraining) {
+    /** `shoe` lets a test stack the deck; otherwise a fresh training shoe is used. */
+    constructor(saved: SavedTraining, shoe?: Shoe) {
+        this.shoe = shoe ?? new Shoe(TRAINING_DECKS);
         this.handsSeen = saved.handsSeen;
         this.handsCorrect = saved.handsCorrect;
         this.bestStreak = saved.bestStreak;
@@ -48,12 +54,33 @@ export class TrainingSession {
      * worth answering.
      */
     deal(): void {
+        // The hand the dealer was asked on does not count towards the recharge.
+        if (this.dealerSays === null && this.recharge > 0) this.recharge--;
+        this.dealerSays = null;
         do {
             if (this.shoe.needsReshuffle()) this.shoe.reset();
             this.player = new Hand([this.shoe.draw(), this.shoe.draw()]);
             this.dealer.reset([this.shoe.draw(), this.shoe.draw()]);
         } while (this.player.isBlackjack || (this.dealer.shouldPeek && this.dealer.hand.isBlackjack));
         this.feedback = null;
+    }
+
+    /**
+     * Reveal the Basic Strategy play. The hand still takes an answer but no
+     * longer counts in the stats, the live streak ends, and the button needs
+     * `ASK_RECHARGE_HANDS` more hands before it works again.
+     */
+    askDealer(): boolean {
+        if (this.feedback !== null || this.dealerSays !== null || this.recharge > 0) return false;
+        this.dealerSays = this.advised();
+        this.streak = 0;
+        this.recharge = ASK_RECHARGE_HANDS;
+        return true;
+    }
+
+    /** Bankroll is unlimited here, so double is always legal and split is legal for a pair. */
+    private advised(): Action {
+        return basicStrategy(this.player, this.dealer.upCard, true, this.player.isPair);
     }
 
     /**
@@ -64,18 +91,20 @@ export class TrainingSession {
         if (this.feedback !== null) return false;
         if (action === 'split' && !this.player.isPair) return false;
 
-        // Bankroll is unlimited here, so double is always legal and split is legal for a pair.
-        const advised = basicStrategy(this.player, this.dealer.upCard, true, this.player.isPair);
+        const advised = this.advised();
         const correct = advised === action;
 
-        this.handsSeen++;
-        if (correct) {
-            this.handsCorrect++;
-            this.streak++;
-            // Best tracks the live streak, so it never lags a run still in progress.
-            if (this.streak > this.bestStreak) this.bestStreak = this.streak;
-        } else {
-            this.streak = 0;
+        // A hand the dealer answered is feedback only: it is left out of the stats.
+        if (this.dealerSays === null) {
+            this.handsSeen++;
+            if (correct) {
+                this.handsCorrect++;
+                this.streak++;
+                // Best tracks the live streak, so it never lags a run still in progress.
+                if (this.streak > this.bestStreak) this.bestStreak = this.streak;
+            } else {
+                this.streak = 0;
+            }
         }
 
         this.feedback = {
@@ -123,7 +152,10 @@ export class TrainingSession {
                 stand: !answered,
                 double: !answered,
                 split: !answered && this.player.isPair,
+                ask: !answered && this.dealerSays === null && this.recharge === 0,
             },
+            dealerSays: this.dealerSays,
+            askRecharge: this.recharge,
             feedback: this.feedback,
             handsSeen: this.handsSeen,
             handsCorrect: this.handsCorrect,

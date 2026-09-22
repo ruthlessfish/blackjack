@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { Card } from '@/game/logic/card';
+import { TIP_AMOUNT } from '@/game/logic/constants';
 import { Shoe } from '@/game/logic/shoe';
 import { StandardGame } from '@/game/logic/StandardGame';
 import type { Rank, SavedTable, Scheduler } from '@/game/logic/types';
@@ -24,8 +25,8 @@ const games: StandardGame[] = [];
  * A table on a stacked shoe. Cards come off in deal order: player, player,
  * dealer up card, dealer hole card, then whatever the hand goes on to draw.
  */
-function table(script: Rank[], saved?: SavedTable, schedule?: Scheduler): StandardGame {
-    const game = new StandardGame(() => {}, { saved, shoe: new ScriptedShoe(script), schedule });
+function table(script: Rank[], saved?: SavedTable, schedule?: Scheduler, random?: () => number): StandardGame {
+    const game = new StandardGame(() => {}, { saved, shoe: new ScriptedShoe(script), schedule, random });
     games.push(game);
     return game;
 }
@@ -251,5 +252,169 @@ describe('what the table offers', () => {
         expect(game.view().can.double).toBe('disabled');
         game.double(); // a disabled play does nothing
         expect(game.view().playerHands[0].bet).toBe(5);
+    });
+});
+
+describe('ask the dealer (standard)', () => {
+    /** Always right, or always wrong, whatever the dealer's accuracy. */
+    const honest = () => 0;
+    const liar = () => 0.99;
+
+    /**
+     * Hard 16 against a dealer 10 (the chart says hit), which draws a 2 to 18 and
+     * stands on it to beat the dealer's 17.
+     */
+    const HIT_TO_WIN: Rank[] = ['10', '6', '10', '7', '2'];
+
+    /** Ask, follow the advice to a hit, then stand on the 18 and win. */
+    function followToWin(game: StandardGame): StandardGame {
+        deal(game, 5);
+        game.askDealer();
+        expect(game.view().advice).toBe('hit');
+        game.hit();
+        game.stand();
+        return game;
+    }
+
+    it('suggests the chart move when it is right', () => {
+        const game = deal(table(HIT_TO_WIN, undefined, undefined, honest), 5);
+        game.askDealer();
+        expect(game.view().advice).toBe('hit');
+        expect(game.view().message.text).toContain('hit');
+    });
+
+    it('suggests some other legal move when it is wrong', () => {
+        const game = deal(table(HIT_TO_WIN, undefined, undefined, liar), 5);
+        game.askDealer();
+        expect(['stand', 'double']).toContain(game.view().advice);
+    });
+
+    it('can be asked once per decision', () => {
+        const game = deal(table(HIT_TO_WIN, undefined, undefined, honest), 5);
+        expect(game.view().can.ask).toBe('ok');
+        game.askDealer();
+        expect(game.view().can.ask).toBe('disabled');
+        game.hit();
+        expect(game.view().advice).toBeNull();
+        expect(game.view().can.ask).toBe('ok');
+    });
+
+    it('is not offered outside play', () => {
+        const game = table(HIT_TO_WIN);
+        expect(game.view().can.ask).toBe('unavailable');
+        game.askDealer();
+        expect(game.view().advice).toBeNull();
+    });
+
+    it('asks for a tip after good advice is followed, and holds the sweep', () => {
+        const clock = manualClock();
+        const game = followToWin(table(HIT_TO_WIN, undefined, clock.schedule, honest));
+        const v = game.view();
+        expect(v.phase).toBe('tip');
+        expect(v.can.tip).toBe('ok');
+        expect(v.can.deal).toBe('unavailable');
+        expect(v.balance).toBe(505);
+        expect(clock.pending()).toBe(0);
+
+        game.tipDealer();
+        expect(game.view().phase).toBe('betting');
+        expect(game.view().balance).toBe(505 - TIP_AMOUNT);
+        expect(game.view().message.text).toContain('Thanks for the tip');
+        expect(clock.pending()).toBe(1);
+    });
+
+    it('gets more accurate after a tip', () => {
+        // A roll of 0.52 misses at the starting 50% but lands once a tip lifts it to 55%.
+        let roll = 0;
+        const game = followToWin(table([...HIT_TO_WIN, '10', '6', '10', '7'], undefined, undefined, () => roll));
+        game.tipDealer();
+        roll = 0.52;
+        deal(game);
+        game.askDealer();
+        expect(game.view().advice).toBe('hit');
+    });
+
+    it('gets less accurate after a refusal', () => {
+        // A roll of 0.47 lands at the starting 50% but misses once a refusal drops it to 45%.
+        let roll = 0;
+        const game = followToWin(table([...HIT_TO_WIN, '10', '6', '10', '7'], undefined, undefined, () => roll));
+        game.declineTip();
+        expect(game.view().phase).toBe('betting');
+        expect(game.view().message.text).not.toContain('Tip');
+        roll = 0.47;
+        deal(game);
+        game.askDealer();
+        expect(game.view().advice).not.toBe('hit');
+    });
+
+    it('keeps accuracy between 0 and 100', () => {
+        let roll = 0;
+        const script: Rank[] = [];
+        for (let i = 0; i < 12; i++) script.push(...HIT_TO_WIN);
+        const game = table(script, undefined, undefined, () => roll);
+        // Eleven tips would take it to 105%, but it tops out at 100%: a roll just under 1 still lands.
+        for (let i = 0; i < 11; i++) {
+            followToWin(game);
+            game.tipDealer();
+        }
+        roll = 0.999;
+        deal(game);
+        game.askDealer();
+        expect(game.view().advice).toBe('hit');
+    });
+
+    it('drops to never right after enough refusals', () => {
+        let roll = 0;
+        const script: Rank[] = [];
+        for (let i = 0; i < 12; i++) script.push(...HIT_TO_WIN);
+        const game = table(script, undefined, undefined, () => roll);
+        // Ten refusals take 50% to 0%; asking at a roll of 0 then misses.
+        for (let i = 0; i < 10; i++) {
+            followToWin(game);
+            game.declineTip();
+        }
+        deal(game);
+        game.askDealer();
+        expect(game.view().advice).not.toBe('hit');
+        game.hit();
+        game.stand();
+        // Wrong advice followed: no tip is owed.
+        expect(game.view().phase).toBe('betting');
+    });
+
+    it('owes no tip when correct advice is ignored', () => {
+        const game = deal(table(HIT_TO_WIN, undefined, undefined, honest), 5);
+        game.askDealer();
+        game.stand();
+        expect(game.view().phase).toBe('betting');
+    });
+
+    it('owes no tip when the balance cannot cover it', () => {
+        // Good advice, but the hand still loses the last $5: the bankroll resets instead.
+        const saved: SavedTable = { decks: 6, startingBalance: 100, balance: 5 };
+        const game = deal(table(['10', '6', '10', '7', '10'], saved, undefined, honest), 5);
+        game.askDealer();
+        game.hit();
+        expect(game.view().phase).toBe('betting');
+        expect(game.view().balance).toBe(100);
+    });
+
+    it('resets the bankroll when the tip takes the last chip', () => {
+        // A 17 pushes the dealer's 17, leaving $5: the tip empties the balance.
+        const saved: SavedTable = { decks: 6, startingBalance: 100, balance: 5 };
+        const game = deal(table(['10', '7', '10', '7'], saved, undefined, honest), 5);
+        game.askDealer();
+        expect(game.view().advice).toBe('stand');
+        game.stand();
+        expect(game.view().phase).toBe('tip');
+        game.tipDealer();
+        expect(game.view().balance).toBe(100);
+        expect(game.view().message.text).toContain('Out of funds');
+    });
+
+    it('never saves the accuracy', () => {
+        const game = followToWin(table(HIT_TO_WIN, undefined, undefined, honest));
+        game.tipDealer();
+        expect(Object.keys(game.snapshot()).sort()).toEqual(['balance', 'decks', 'startingBalance']);
     });
 });

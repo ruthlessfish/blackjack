@@ -1,10 +1,13 @@
 import {
     BLACKJACK_PAYOUT,
     CHIPS,
+    DEALER_ACCURACY_START,
+    DEALER_ACCURACY_STEP,
     DEFAULT_SETTINGS,
     MAX_HANDS,
     MIN_BET,
     SWEEP_DELAY_MS,
+    TIP_AMOUNT,
 } from './constants';
 import { Card, toCardView } from './card';
 import { Dealer } from './dealer';
@@ -12,7 +15,9 @@ import { PlayerHand } from './hand';
 import { Player } from './player';
 import { parseBankroll, parseDecks } from './settings';
 import { Shoe } from './shoe';
+import { basicStrategy } from './strategy';
 import type {
+    Action,
     Availability,
     ChipView,
     MessageKind,
@@ -34,6 +39,14 @@ const timeoutScheduler: Scheduler = (fn, ms) => {
 
 const availableWhen = (on: boolean): Availability => (on ? 'ok' : 'unavailable');
 
+/** How each move is named when the dealer suggests it. */
+const ACTION_NAME: Record<Action, string> = {
+    hit: 'hit',
+    stand: 'stand',
+    double: 'double down',
+    split: 'split',
+};
+
 export interface TableOptions {
     /** The table to resume, or nothing for a fresh one. */
     saved?: SavedTable;
@@ -41,6 +54,8 @@ export interface TableOptions {
     shoe?: Shoe;
     /** How the auto-sweep is timed. A scene passes its own clock; the default is `setTimeout`. */
     schedule?: Scheduler;
+    /** Where the dealer's advice gets its luck, in [0, 1). The default is `Math.random`. */
+    random?: () => number;
 }
 
 /**
@@ -59,13 +74,26 @@ export class StandardGame {
     private message: MessageView = { text: BET_PROMPT };
     /** Cancels the pending auto-sweep of the settled round, if one is still counting down. */
     private cancelSweepTimer: (() => void) | null = null;
+    /**
+     * How often the dealer's advice is right, in whole percent. Tips raise it and
+     * refusals lower it. It is never saved, so every new table starts it afresh.
+     */
+    private dealerAccuracy = DEALER_ACCURACY_START;
+    /** The dealer's suggestion for the current decision, if the player asked. */
+    private advice: { action: Action; correct: boolean } | null = null;
+    /** The player followed good advice this round, so the dealer will hope for a tip. */
+    private owesTip = false;
+    /** The settlement line, held while the tip question takes over the message. */
+    private settledMessage: MessageView = { text: '' };
 
     private readonly onChange: (state: ViewState) => void;
     private readonly schedule: Scheduler;
+    private readonly random: () => number;
 
-    constructor(onChange: (state: ViewState) => void, { saved, shoe, schedule }: TableOptions = {}) {
+    constructor(onChange: (state: ViewState) => void, { saved, shoe, schedule, random }: TableOptions = {}) {
         this.onChange = onChange;
         this.schedule = schedule ?? timeoutScheduler;
+        this.random = random ?? Math.random;
         this.startingBalance = saved ? saved.startingBalance : DEFAULT_SETTINGS.startingBalance;
         this.shoe = shoe ?? new Shoe(saved ? saved.decks : DEFAULT_SETTINGS.decks);
         this.player = new Player(saved ? saved.balance : this.startingBalance);
@@ -185,6 +213,8 @@ export class StandardGame {
         if (this.phase !== 'betting' || this.player.pendingBet <= 0) return;
         this.cancelSweep();
         if (this.shoe.needsReshuffle()) this.shoe.reset();
+        this.advice = null;
+        this.owesTip = false;
 
         this.player.startRound([this.draw(), this.draw()]);
         this.dealer.reset([this.draw(), this.draw()]);
@@ -238,6 +268,7 @@ export class StandardGame {
 
     hit(): void {
         if (this.phase !== 'player') return;
+        this.followAdvice('hit');
         const hand = this.player.activeHand;
         hand.add(this.draw());
         if (hand.total >= 21) {
@@ -252,12 +283,14 @@ export class StandardGame {
 
     stand(): void {
         if (this.phase !== 'player') return;
+        this.followAdvice('stand');
         this.player.activeHand.resolve();
         this.advance();
     }
 
     double(): void {
         if (this.doubleAvailability() !== 'ok') return;
+        this.followAdvice('double');
         const hand = this.player.activeHand;
         this.player.take(hand.bet);
         hand.doubleBet();
@@ -269,6 +302,7 @@ export class StandardGame {
 
     split(): void {
         if (this.splitAvailability() !== 'ok') return;
+        this.followAdvice('split');
         const hand = this.player.activeHand;
         const [c1, c2] = hand.cards;
         const aces = c1.isAce;
@@ -277,6 +311,57 @@ export class StandardGame {
 
         // Deal the active (first) hand its second card and continue.
         this.enterHand(this.player.activeIndex);
+    }
+
+    // ---- Ask the dealer ----------------------------------------------------
+
+    /**
+     * The dealer suggests a move for the current decision. It is the Basic
+     * Strategy play `dealerAccuracy`% of the time, and otherwise some other
+     * move the player could legally make.
+     */
+    askDealer(): void {
+        if (this.phase !== 'player' || this.advice !== null) return;
+        const canDouble = this.doubleAvailability() === 'ok';
+        const canSplit = this.splitAvailability() === 'ok';
+        const best = basicStrategy(this.player.activeHand, this.dealer.upCard, canDouble, canSplit);
+
+        let action = best;
+        const correct = this.random() * 100 < this.dealerAccuracy;
+        if (!correct) {
+            const legal: Action[] = ['hit', 'stand'];
+            if (canDouble) legal.push('double');
+            if (canSplit) legal.push('split');
+            // Hit and stand are always legal, so there is always another move to offer.
+            const others = legal.filter((a) => a !== best);
+            action = others[Math.floor(this.random() * others.length)];
+        }
+        this.advice = { action, correct };
+        this.setMessage(`Dealer suggests: ${ACTION_NAME[action]}.`);
+        this.render();
+    }
+
+    /** Note whether a move follows good advice. Either way the advice is spent. */
+    private followAdvice(action: Action): void {
+        if (this.advice?.correct && this.advice.action === action) this.owesTip = true;
+        this.advice = null;
+    }
+
+    /** Tip the dealer for advice that paid off; the dealer's advice gets better. */
+    tipDealer(): void {
+        if (this.phase !== 'tip') return;
+        this.player.take(TIP_AMOUNT);
+        this.dealerAccuracy = Math.min(100, this.dealerAccuracy + DEALER_ACCURACY_STEP);
+        this.setMessage(`${this.settledMessage.text} Thanks for the tip!`, this.settledMessage.kind);
+        this.finishRound();
+    }
+
+    /** Refuse the tip; the dealer's advice gets worse. */
+    declineTip(): void {
+        if (this.phase !== 'tip') return;
+        this.dealerAccuracy = Math.max(0, this.dealerAccuracy - DEALER_ACCURACY_STEP);
+        this.setMessage(this.settledMessage.text, this.settledMessage.kind);
+        this.finishRound();
     }
 
     /** Make hand `i` active, dealing a second card if it just came from a split. */
@@ -385,7 +470,24 @@ export class StandardGame {
             this.settlementText(netProfit, dealerBJ, notes, blackjack),
             blackjack ? 'blackjack' : this.netOutcome(netProfit),
         );
+        this.player.clearInsurance();
 
+        // Good advice followed: hold the result on the table while the dealer waits for a tip.
+        const tipDue = this.owesTip && this.player.balance >= TIP_AMOUNT;
+        this.owesTip = false;
+        if (tipDue) {
+            this.phase = 'tip';
+            this.settledMessage = { ...this.message };
+            this.setMessage(`${this.message.text} Tip the dealer $${TIP_AMOUNT} for the advice?`, this.message.kind);
+            this.render();
+            return;
+        }
+        this.finishRound();
+    }
+
+
+    /** Close the round: check the bankroll, carry the bet, and start the betting phase. */
+    private finishRound(): void {
         // Below the smallest chip there is no legal bet left, so the table is dead.
         if (this.player.balance < MIN_BET) {
             this.player.resetBankroll(this.startingBalance);
@@ -397,7 +499,6 @@ export class StandardGame {
             );
         }
 
-        this.player.clearInsurance();
         this.phase = 'betting';
         // Carry the stake into the next round so the player can just hit Deal;
         // if the balance no longer covers it, start from zero instead.
@@ -512,7 +613,13 @@ export class StandardGame {
             dealerTotal: dealerHand.cards.length && !hidden ? dealerHand.total : null,
             dealerSoft: !hidden && dealerHand.isSoft,
             balance: this.player.balance,
-            betDisplay: this.phase === 'betting' ? this.player.pendingBet : this.player.committed,
+            // While a tip is pending the stakes are already paid out, so none are on the table.
+            betDisplay:
+                this.phase === 'betting'
+                    ? this.player.pendingBet
+                    : this.phase === 'tip'
+                      ? 0
+                      : this.player.committed,
             phase: this.phase,
             shoeRemaining: this.shoe.remaining,
             shoeTotal: this.shoe.total,
@@ -527,6 +634,7 @@ export class StandardGame {
                 blackjack: this.paidBlackjack(h),
                 label: this.player.hands.length > 1 ? `Hand ${i + 1}` : 'You',
             })),
+            advice: this.advice?.action ?? null,
             message: { ...this.message },
             settings: this.settings,
             chips: this.chipViews(),
@@ -538,6 +646,8 @@ export class StandardGame {
                 double: this.doubleAvailability(),
                 split: this.splitAvailability(),
                 insurance: availableWhen(this.phase === 'insurance'),
+                ask: this.phase !== 'player' ? 'unavailable' : this.advice === null ? 'ok' : 'disabled',
+                tip: availableWhen(this.phase === 'tip'),
                 settings: this.phase === 'betting',
             },
         };
