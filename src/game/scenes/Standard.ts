@@ -1,5 +1,5 @@
 import { GameObjects, Scene, Scenes } from 'phaser';
-import { CHIPS } from '../logic/constants';
+import { CHIPS, TIP_AMOUNT } from '../logic/constants';
 import { StandardGame } from '../logic/StandardGame';
 import type { Availability, PlayerHandView, ViewState } from '../logic/types';
 import { loadTable, saveTable } from '../storage';
@@ -72,6 +72,9 @@ export class Standard extends Scene {
     private splitButton!: Button;
     private insuranceYes!: Button;
     private insuranceNo!: Button;
+    private askButton!: Button;
+    private tipYes!: Button;
+    private tipNo!: Button;
 
     constructor() {
         super('Standard');
@@ -125,8 +128,16 @@ export class Standard extends Scene {
         bind('S', () => this.table.stand());
         bind('D', () => this.table.double());
         bind('P', () => this.table.split());
-        bind('Y', () => this.table.takeInsurance());
-        bind('N', () => this.table.declineInsurance());
+        bind('A', () => this.table.askDealer());
+        // Insurance and the tip are never offered together, and each ignores Y/N outside its phase.
+        bind('Y', () => {
+            this.table.takeInsurance();
+            this.table.tipDealer();
+        });
+        bind('N', () => {
+            this.table.declineInsurance();
+            this.table.declineTip();
+        });
         bind('SPACE', () => this.table.deal());
         bind('ENTER', () => this.table.deal());
     }
@@ -210,6 +221,29 @@ export class Standard extends Scene {
             variant: 'primary',
             onClick: () => this.table.declineInsurance(),
         });
+
+        this.askButton = new Button(this, 850, y, {
+            label: 'Ask dealer',
+            width: 150,
+            height: 56,
+            fontSize: 20,
+            onClick: () => this.table.askDealer(),
+        });
+        this.tipYes = new Button(this, 400, y, {
+            label: `Tip $${TIP_AMOUNT}`,
+            width: 230,
+            height: 56,
+            fontSize: 22,
+            onClick: () => this.table.tipDealer(),
+        });
+        this.tipNo = new Button(this, 640, y, {
+            label: 'No thanks',
+            width: 200,
+            height: 56,
+            fontSize: 22,
+            variant: 'primary',
+            onClick: () => this.table.declineTip(),
+        });
     }
 
     // ---- Rendering ---------------------------------------------------------
@@ -253,9 +287,12 @@ export class Standard extends Scene {
         this.renderControls(v);
     }
 
-    /** Green above the starting bankroll, red below. Chips already staked on the table still count as yours. */
+    /**
+     * Green above the starting bankroll, red below. Chips already staked on the table still count as
+     * yours. While a tip is pending the round is paid out, so the balance is already the whole story.
+     */
     private balanceColor(v: ViewState): string {
-        const worth = v.phase === 'betting' ? v.balance : v.balance + v.betDisplay;
+        const worth = v.phase === 'betting' || v.phase === 'tip' ? v.balance : v.balance + v.betDisplay;
         if (worth > v.settings.startingBalance) return COLOR.win;
         if (worth < v.settings.startingBalance) return COLOR.lose;
         return COLOR.text;
@@ -331,6 +368,9 @@ export class Standard extends Scene {
         this.showAvailability(this.splitButton, v.can.split);
         this.showAvailability(this.insuranceYes, v.can.insurance);
         this.showAvailability(this.insuranceNo, v.can.insurance);
+        this.showAvailability(this.askButton, v.can.ask);
+        this.showAvailability(this.tipYes, v.can.tip);
+        this.showAvailability(this.tipNo, v.can.tip);
 
         this.settingsButton.setEnabled(v.can.settings);
     }

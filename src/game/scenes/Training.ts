@@ -38,6 +38,7 @@ export class Training extends Scene {
     private statValues!: Record<'hands' | 'correct' | 'accuracy' | 'streak' | 'best', GameObjects.Text>;
     private actionButtons = new Map<Action, Button>();
     private nextButton!: Button;
+    private askButton!: Button;
     private resetButton!: Button;
     private advanceTimer: Time.TimerEvent | null = null;
     private resetTimer: Time.TimerEvent | null = null;
@@ -139,11 +140,21 @@ export class Training extends Scene {
             variant: 'primary',
             onClick: () => this.next(),
         });
+
+        this.askButton = new Button(this, 850, 704, {
+            label: 'Ask dealer',
+            sublabel: 'key A',
+            width: 220,
+            height: 58,
+            fontSize: 24,
+            onClick: () => this.ask(),
+        });
     }
 
     private bindKeys(): void {
         const kb = this.input.keyboard!;
         for (const a of ACTIONS) kb.on(`keydown-${a.key}`, () => this.choose(a.action));
+        kb.on('keydown-A', () => this.ask());
         kb.on('keydown-SPACE', () => this.next());
         kb.on('keydown-ENTER', () => this.next());
     }
@@ -158,6 +169,11 @@ export class Training extends Scene {
         if (this.session.view().feedback?.correct) {
             this.advanceTimer = this.time.delayedCall(AUTO_ADVANCE_MS, () => this.next());
         }
+    }
+
+    /** Reveal the play. It costs the streak, so there is nothing new to save. */
+    private ask(): void {
+        if (this.session.askDealer()) this.render();
     }
 
     /** Move to the next hand. Also the manual path for a correct answer, skipping the wait. */
@@ -208,11 +224,17 @@ export class Training extends Scene {
 
         if (v.feedback) {
             this.feedback.setText(v.feedback.text).setColor(v.feedback.correct ? COLOR.win : COLOR.lose);
+        } else if (v.dealerSays) {
+            const label = ACTIONS.find((a) => a.action === v.dealerSays)!.label;
+            this.feedback.setText(`Dealer says: ${label}.`).setColor(COLOR.gold);
         } else {
             this.feedback.setText('What is the Basic Strategy play?').setColor(COLOR.text);
         }
 
         for (const [action, button] of this.actionButtons) button.setEnabled(v.can[action]);
         this.nextButton.setVisible(v.feedback !== null && !v.feedback.correct);
+        this.askButton.setEnabled(v.can.ask);
+        // The hand the dealer was asked on shows the full wait; it starts counting on the next one.
+        this.askButton.setSublabel(v.askRecharge > 0 ? `recharging (${v.askRecharge})` : 'key A');
     }
 }

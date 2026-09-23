@@ -84,6 +84,12 @@ is set on this texture only.
   saves after every answer.
 - Training skips hands with no decision (player natural, or a dealer natural the peek would catch).
 - The best streak updates the moment the live streak passes it (blackjack2 only updated it on a miss).
+- Ask the Dealer (`A` key) works differently per mode. In Training it reveals the chart play, ends the
+  live streak, leaves that hand out of Hands/Correct, and recharges over the next `ASK_RECHARGE_HANDS`
+  hands. In Standard the advice is right `dealerAccuracy`% of the time (50 at start); following good
+  advice puts the settled round in a `tip` phase, and a tip (+5) or refusal (−5) moves the accuracy. The
+  accuracy is never saved, so it resets whenever a table is created (including a return from the menu).
+  `StandardGame` takes a `random` option so tests can fix the dealer's luck.
 - The bankroll setting is a row of presets (`BANKROLL_OPTIONS`) because Phaser has no text input.
 
 ## Assets

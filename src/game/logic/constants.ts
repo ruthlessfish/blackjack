@@ -7,6 +7,13 @@ export const RESHUFFLE_FRACTION = 0.25; // reshuffle when fewer than this share 
 export const SWEEP_DELAY_MS = 3000; // how long a settled round stays on the table
 export const TRAINING_DECKS = 6;
 
+/** Hands after asking the Training dealer before the button works again. */
+export const ASK_RECHARGE_HANDS = 3;
+/** What a Standard-mode tip costs, and how far each tip (or refusal) moves the dealer's accuracy. */
+export const TIP_AMOUNT = 5;
+export const DEALER_ACCURACY_START = 50; // percent, reset every time a table is created
+export const DEALER_ACCURACY_STEP = 5;
+
 /** Chip denominations on the table. */
 export const CHIPS: readonly number[] = [5, 25, 100];
 

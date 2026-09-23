@@ -26,7 +26,8 @@ export interface CardView {
     red: boolean;
 }
 
-export type Phase = 'betting' | 'insurance' | 'player' | 'dealer' | 'settled';
+/** `tip` holds a settled round while the player decides whether to tip the dealer for good advice. */
+export type Phase = 'betting' | 'insurance' | 'player' | 'dealer' | 'settled' | 'tip';
 export type Outcome = 'win' | 'lose' | 'push';
 export type Action = 'hit' | 'stand' | 'double' | 'split';
 
@@ -82,6 +83,8 @@ export interface ViewState {
     /** Cards retired to the discard tray. Excludes cards still in play on the table. */
     shoeDiscarded: number;
     playerHands: PlayerHandView[];
+    /** The move the dealer suggested for the current decision, if the player asked. */
+    advice: Action | null;
     message: MessageView;
     settings: Settings;
     chips: ChipView[];
@@ -94,6 +97,10 @@ export interface ViewState {
         split: Availability;
         /** Both insurance buttons: take it or decline. */
         insurance: Availability;
+        /** Ask the dealer: shown during play, dimmed once asked for this decision. */
+        ask: Availability;
+        /** Both tip buttons: tip the dealer or decline. */
+        tip: Availability;
         /** Whether the round-scoped settings (shoe, bankroll) can be changed. */
         settings: boolean;
     };
@@ -105,8 +112,12 @@ export interface TrainingView {
     player: CardView[];
     /** How the hand reads at a glance: "Hard 16", "Soft 18", "Pair of 8s". */
     handLabel: string;
-    /** Which of the four moves the player may pick right now. */
-    can: Record<Action, boolean>;
+    /** Which of the four moves the player may pick right now, and whether the dealer can be asked. */
+    can: Record<Action, boolean> & { ask: boolean };
+    /** The play the dealer revealed for this hand; null if not asked. */
+    dealerSays: Action | null;
+    /** Hands left before Ask the Dealer recharges; 0 when ready. */
+    askRecharge: number;
     /** Set once the player has answered; null while the hand awaits a move. */
     feedback: { correct: boolean; text: string } | null;
     handsSeen: number;
