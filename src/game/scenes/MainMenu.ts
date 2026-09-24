@@ -54,6 +54,16 @@ export class MainMenu extends Scene {
             size: 16,
             color: COLOR.dim,
         });
+        new Button(this, cx, 626, {
+            label: 'How to Play',
+            sublabel: 'key H',
+            width: 240,
+            height: 58,
+            fontSize: 22,
+            onClick: () => this.scene.start('HowToPlay'),
+        });
+        this.input.keyboard!.on('keydown-H', () => this.scene.start('HowToPlay'));
+
         addText(this, cx, 752, '© 2026 Shane Pearson. All rights reserved.', { size: 13, color: COLOR.dim });
     }
 

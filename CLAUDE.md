@@ -63,8 +63,10 @@ soaked from Node; scenes only draw a view object and forward clicks (they never 
   `snapshot()` / `dispose()`), `TrainingSession` (deal, `answer()`, stats; exposes `TrainingView`),
   `settings.ts` (sanitising), `types.ts`, `constants.ts`.
 - `storage.ts` — the only `localStorage` access; every read/write is in try/catch and sanitised on load.
-- `scenes/` — `Preloader` → `MainMenu` → `Training` | `Standard`. `Preloader` loads the two images and
-  cuts the sprite frames.
+- `scenes/` — `Preloader` → `MainMenu` → `Training` | `Standard` | `HowToPlay`. `Preloader` loads the two
+  images and cuts the sprite frames. `HowToPlay` is paged instructions; its strategy charts are built by
+  calling `basicStrategy()` cell by cell, and its numbers come from `logic/constants.ts`, so neither is
+  hand-copied.
 - `ui/` — `Button`, `ChipButton`, `HandView` (diffs cards so only new ones animate, flips the hole card),
   `Pile`, `BetStack`, `SettingsModal`, `hud.ts` (the top-bar stat box and Menu button), `atlas.ts` (frame
   names), `theme.ts` (colours, fonts, backgrounds, chip labels).

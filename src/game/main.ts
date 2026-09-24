@@ -1,3 +1,4 @@
+import { HowToPlay } from './scenes/HowToPlay';
 import { MainMenu } from './scenes/MainMenu';
 import { Preloader } from './scenes/Preloader';
 import { Standard } from './scenes/Standard';
@@ -22,7 +23,8 @@ const config: Types.Core.GameConfig = {
         Preloader,
         MainMenu,
         Training,
-        Standard
+        Standard,
+        HowToPlay
     ]
 };
 
