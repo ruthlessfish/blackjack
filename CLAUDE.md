@@ -27,6 +27,7 @@ npm run preview      # serve the production build locally
 npm run clean        # rm -rf dist
 npm test             # vitest run: the rules and strategy tests in tests/*.test.ts
 npx tsc --noEmit     # type check (there is no npm script for this)
+npm run simulate     # 100 Basic Strategy hands vs the Standard dealer; `-- -v` prints a table
 ```
 
 Tests are Vitest and cover `logic/` only (rules, settlement, the strategy chart, the shoe); there is no

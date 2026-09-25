@@ -1,7 +1,7 @@
 {
   "name": "blackjack3",
   "description": "Blackjack with Training and Standard modes, built with Phaser and Vite.",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ruthlessfish/blackjack.git"
@@ -17,9 +17,11 @@
     "clean": "rm -rf dist",
     "preview": "vite preview --config vite/config.prod.mjs",
     "test": "vitest run",
-    "bump": "node scripts/bump-version.mjs"
+    "bump": "node scripts/bump-version.mjs",
+    "simulate": "esbuild scripts/simulate.ts --bundle --platform=node --format=esm --log-level=warning | node --input-type=module -"
   },
   "devDependencies": {
+    "esbuild": "^0.25.12",
     "typescript": "~5.7.2",
     "vite": "^6.3.1",
     "vitest": "^5.0.1"
