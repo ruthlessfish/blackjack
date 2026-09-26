@@ -1,4 +1,4 @@
-import { ASK_RECHARGE_HANDS, TRAINING_DECKS } from './constants';
+import { ASK_RECHARGE_HANDS, DEFAULT_RULES, TRAINING_DECKS } from './constants';
 import { toCardView } from './card';
 import { Dealer } from './dealer';
 import { Hand } from './hand';
@@ -12,6 +12,7 @@ const ACTION_NAME: Record<Action, string> = {
     stand: 'stand',
     double: 'double down',
     split: 'split',
+    surrender: 'surrender',
 };
 
 /** Share of hands answered correctly, 0-100, or null before the first hand. */
@@ -78,9 +79,12 @@ export class TrainingSession {
         return true;
     }
 
-    /** Bankroll is unlimited here, so double is always legal and split is legal for a pair. */
+    /**
+     * Bankroll is unlimited here, so double is always legal and split is legal for a pair.
+     * Training always drills the default rules, which have no surrender.
+     */
     private advised(): Action {
-        return basicStrategy(this.player, this.dealer.upCard, true, this.player.isPair);
+        return basicStrategy(this.player, this.dealer.upCard, { double: true, split: this.player.isPair }, DEFAULT_RULES);
     }
 
     /**
@@ -152,6 +156,7 @@ export class TrainingSession {
                 stand: !answered,
                 double: !answered,
                 split: !answered && this.player.isPair,
+                surrender: false,
                 ask: !answered && this.dealerSays === null && this.recharge === 0,
             },
             dealerSays: this.dealerSays,

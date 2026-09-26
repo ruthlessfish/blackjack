@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { Card } from '@/game/logic/card';
-import { TIP_AMOUNT } from '@/game/logic/constants';
+import { DEFAULT_RULES, DEFAULT_SETTINGS, TIP_AMOUNT } from '@/game/logic/constants';
+import { freshStats } from '@/game/logic/settings';
 import { Shoe } from '@/game/logic/shoe';
 import { StandardGame } from '@/game/logic/StandardGame';
-import type { Rank, SavedTable, Scheduler } from '@/game/logic/types';
+import type { Rank, SavedTable, Scheduler, TableRules } from '@/game/logic/types';
 
 /** A shoe that deals the scripted ranks first, then falls back to a real shuffle. */
 class ScriptedShoe extends Shoe {
@@ -20,6 +21,18 @@ class ScriptedShoe extends Shoe {
 }
 
 const games: StandardGame[] = [];
+
+/** A saved table on the default settings, with the given fields changed. */
+function savedTable(changes: Partial<Omit<SavedTable, 'rules'>> & { rules?: Partial<TableRules> } = {}): SavedTable {
+    const balance = changes.balance ?? DEFAULT_SETTINGS.startingBalance;
+    return {
+        ...DEFAULT_SETTINGS,
+        balance,
+        stats: freshStats(balance),
+        ...changes,
+        rules: { ...DEFAULT_RULES, ...changes.rules },
+    };
+}
 
 /**
  * A table on a stacked shoe. Cards come off in deal order: player, player,
@@ -151,7 +164,7 @@ describe('insurance', () => {
 
 describe('bankroll', () => {
     it('keeps the result of the hand that broke the player, then resets', () => {
-        const saved: SavedTable = { decks: 6, startingBalance: 100, balance: 5 };
+        const saved = savedTable({ startingBalance: 100, balance: 5 });
         const game = deal(table(['10', '2', '10', '9'], saved), 5);
         game.stand(); // 12 loses to 19
 
@@ -164,19 +177,25 @@ describe('bankroll', () => {
 describe('settings', () => {
     it('ignores a deck count the panel does not offer', () => {
         const game = table([]);
-        game.applySettings({ decks: 0, startingBalance: 500 });
+        game.applySettings({ ...DEFAULT_SETTINGS, decks: 0 });
         expect(game.view().settings.decks).toBe(6);
 
-        game.applySettings({ decks: 2, startingBalance: 500 });
+        game.applySettings({ ...DEFAULT_SETTINGS, decks: 2 });
         expect(game.view().settings.decks).toBe(2);
     });
 
     it('saves the live deck count and bankroll', () => {
         const game = table([]);
-        game.applySettings({ decks: 2, startingBalance: 1000 });
+        game.applySettings({ ...DEFAULT_SETTINGS, decks: 2, startingBalance: 1000 });
 
         // A new bankroll also resets the balance to it.
-        expect(game.snapshot()).toEqual({ decks: 2, startingBalance: 1000, balance: 1000 });
+        expect(game.snapshot()).toEqual({
+            decks: 2,
+            startingBalance: 1000,
+            rules: DEFAULT_RULES,
+            balance: 1000,
+            stats: freshStats(1000),
+        });
     });
 });
 
@@ -246,7 +265,7 @@ describe('what the table offers', () => {
     });
 
     it('dims a double the bankroll cannot cover', () => {
-        const saved: SavedTable = { decks: 6, startingBalance: 100, balance: 5 };
+        const saved = savedTable({ startingBalance: 100, balance: 5 });
         const game = deal(table(['6', '5', '10', '9'], saved), 5);
 
         expect(game.view().can.double).toBe('disabled');
@@ -391,7 +410,7 @@ describe('ask the dealer (standard)', () => {
 
     it('owes no tip when the balance cannot cover it', () => {
         // Good advice, but the hand still loses the last $5: the bankroll resets instead.
-        const saved: SavedTable = { decks: 6, startingBalance: 100, balance: 5 };
+        const saved = savedTable({ startingBalance: 100, balance: 5 });
         const game = deal(table(['10', '6', '10', '7', '10'], saved, undefined, honest), 5);
         game.askDealer();
         game.hit();
@@ -401,7 +420,7 @@ describe('ask the dealer (standard)', () => {
 
     it('resets the bankroll when the tip takes the last chip', () => {
         // A 17 pushes the dealer's 17, leaving $5: the tip empties the balance.
-        const saved: SavedTable = { decks: 6, startingBalance: 100, balance: 5 };
+        const saved = savedTable({ startingBalance: 100, balance: 5 });
         const game = deal(table(['10', '7', '10', '7'], saved, undefined, honest), 5);
         game.askDealer();
         expect(game.view().advice).toBe('stand');
@@ -415,6 +434,155 @@ describe('ask the dealer (standard)', () => {
     it('never saves the accuracy', () => {
         const game = followToWin(table(HIT_TO_WIN, undefined, undefined, honest));
         game.tipDealer();
-        expect(Object.keys(game.snapshot()).sort()).toEqual(['balance', 'decks', 'startingBalance']);
+        expect(Object.keys(game.snapshot()).sort()).toEqual(['balance', 'decks', 'rules', 'startingBalance', 'stats']);
+    });
+});
+
+describe('table rules', () => {
+    it.each([
+        [[5, 5], 15],
+        [[5], 7], // $7.50 rounds down
+        [[25], 37],
+    ])('3:2 pays bet %j with %i', (chips, win) => {
+        const saved = savedTable({ rules: { blackjackPays: '3:2' } });
+        const game = deal(table(['A', 'K', '9', '7'], saved), ...chips);
+        expect(game.view().balance).toBe(500 + win);
+    });
+
+    it('the dealer stands on a soft 17 by default', () => {
+        const game = deal(table(['10', '9', '6', 'A', '2']), 5);
+        game.stand();
+        expect(game.view().dealerTotal).toBe(17);
+        expect(game.view().balance).toBe(505);
+    });
+
+    it('the dealer draws on a soft 17 when it hits soft 17', () => {
+        const saved = savedTable({ rules: { dealerHitsSoft17: true } });
+        const game = deal(table(['10', '9', '6', 'A', '2'], saved), 5);
+        game.stand();
+        expect(game.view().dealerTotal).toBe(19);
+        expect(game.view().balance).toBe(500); // a push
+    });
+
+    it('split hands cannot double without double after split', () => {
+        const script: Rank[] = ['8', '8', '10', '9', '3', '5'];
+        const das = deal(table(script), 5);
+        das.split();
+        expect(das.view().can.double).toBe('ok');
+
+        const saved = savedTable({ rules: { doubleAfterSplit: false } });
+        const noDas = deal(table(script, saved), 5);
+        noDas.split();
+        expect(noDas.view().playerHands[0].total).toBe(11);
+        expect(noDas.view().can.double).toBe('unavailable');
+        noDas.double(); // an unavailable play does nothing
+        expect(noDas.view().playerHands[0].bet).toBe(5);
+    });
+
+    it('takes new rules from the settings panel between rounds', () => {
+        const game = table([]);
+        game.applySettings({ ...DEFAULT_SETTINGS, rules: { ...DEFAULT_RULES, surrender: true } });
+        expect(game.view().settings.rules.surrender).toBe(true);
+        expect(game.snapshot().rules.surrender).toBe(true);
+    });
+});
+
+describe('late surrender', () => {
+    const withSurrender = () => savedTable({ rules: { surrender: true } });
+
+    it('is not offered when the table does not allow it', () => {
+        const game = deal(table(['10', '6', '10', '9']), 5, 5);
+        expect(game.view().can.surrender).toBe('unavailable');
+        game.surrender();
+        expect(game.view().phase).toBe('player');
+    });
+
+    it('gives back half the bet, and the dealer draws nothing', () => {
+        const game = deal(table(['10', '6', '10', '6', '5'], withSurrender()), 5, 5);
+        expect(game.view().can.surrender).toBe('ok');
+        game.surrender();
+
+        const v = game.view();
+        expect(v.balance).toBe(495);
+        expect(v.dealer).toHaveLength(2);
+        expect(v.playerHands[0]).toMatchObject({ outcome: 'lose', surrendered: true });
+        expect(v.message.text).toContain('You lost $5.');
+        expect(v.phase).toBe('betting');
+    });
+
+    it('rounds the refund down', () => {
+        const game = deal(table(['10', '6', '10', '9'], withSurrender()), 5);
+        game.surrender();
+        expect(game.view().balance).toBe(497);
+    });
+
+    it('is gone after a hit', () => {
+        const game = deal(table(['10', '2', '10', '9', '3'], withSurrender()), 5);
+        game.hit();
+        expect(game.view().can.surrender).toBe('unavailable');
+    });
+
+    it('is gone after a split', () => {
+        const game = deal(table(['8', '8', '10', '9', '3', '5'], withSurrender()), 5);
+        game.split();
+        expect(game.view().can.surrender).toBe('unavailable');
+    });
+
+    it('comes after the peek, so a dealer blackjack takes the whole bet', () => {
+        const game = deal(table(['10', '6', '10', 'A'], withSurrender()), 5, 5);
+        expect(game.view().phase).toBe('betting');
+        expect(game.view().balance).toBe(490);
+    });
+
+    it('is what an honest dealer suggests for 16 against a 10', () => {
+        const game = deal(table(['10', '6', '10', '9'], withSurrender(), undefined, () => 0), 5);
+        game.askDealer();
+        expect(game.view().advice).toBe('surrender');
+    });
+});
+
+describe('session stats', () => {
+    /** Win $5, a $6 blackjack, then lose $5, carrying the $5 bet from round to round. */
+    const THREE_ROUNDS: Rank[] = ['10', '9', '10', '7', 'A', 'K', '9', '7', '10', '2', '10', '9'];
+
+    function playThree(game: StandardGame): StandardGame {
+        deal(game, 5).stand();
+        deal(game);
+        deal(game).stand();
+        return game;
+    }
+
+    it('counts each round by its net result', () => {
+        const game = playThree(table(THREE_ROUNDS));
+        expect(game.view().balance).toBe(506);
+        expect(game.view().stats).toEqual({
+            rounds: 3,
+            wins: 2,
+            losses: 1,
+            pushes: 0,
+            blackjacks: 1,
+            biggestWin: 6,
+            peakBalance: 511,
+        });
+    });
+
+    it('survives a save and reload', () => {
+        const game = playThree(table(THREE_ROUNDS));
+        const resumed = table([], game.snapshot());
+        expect(resumed.view().stats).toEqual(game.view().stats);
+    });
+
+    it('starts afresh with a new bankroll', () => {
+        const game = playThree(table(THREE_ROUNDS));
+        game.applySettings({ ...DEFAULT_SETTINGS, startingBalance: 1000 });
+        expect(game.view().stats).toEqual(freshStats(1000));
+    });
+
+    it('keeps counting through running out of funds', () => {
+        const saved = savedTable({ startingBalance: 100, balance: 5 });
+        const game = deal(table(['10', '2', '10', '9'], saved), 5);
+        game.stand();
+        expect(game.view().balance).toBe(100);
+        expect(game.view().stats).toMatchObject({ rounds: 1, losses: 1 });
     });
 });

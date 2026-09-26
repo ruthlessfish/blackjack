@@ -2,11 +2,12 @@ import { GameObjects, Scene } from 'phaser';
 import { Card } from '../logic/card';
 import {
     ASK_RECHARGE_HANDS,
-    BLACKJACK_PAYOUT,
+    BLACKJACK_PAYOUTS,
     CHIPS,
     DEALER_ACCURACY_START,
     DEALER_ACCURACY_STEP,
     DECK_OPTIONS,
+    DEFAULT_RULES,
     MAX_HANDS,
     MIN_BET,
     TIP_AMOUNT,
@@ -37,6 +38,8 @@ const CELL_STYLE: Record<Cell, { fill: number; label: string; ink: string }> = {
     double: { fill: HEX.gold, label: 'D', ink: COLOR.ink },
     'double-stand': { fill: 0xf7dd8a, label: 'Ds', ink: COLOR.ink },
     split: { fill: 0x4aa3df, label: 'P', ink: '#ffffff' },
+    // The charts use the default rules, which have no surrender, so this is never drawn today.
+    surrender: { fill: 0x9b7fd1, label: 'R', ink: '#ffffff' },
 };
 
 interface ChartRow {
@@ -71,8 +74,8 @@ const PAIR_ROWS: ChartRow[] = (['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A
 function chartCell(cards: [Rank, Rank], up: Rank): Cell {
     const hand = new Hand(cards.map((r) => new Card(r, '♠')));
     const upCard = new Card(up, '♠');
-    const play = basicStrategy(hand, upCard, true, true);
-    if (play === 'double' && basicStrategy(hand, upCard, false, true) === 'stand') return 'double-stand';
+    const play = basicStrategy(hand, upCard, { double: true, split: true });
+    if (play === 'double' && basicStrategy(hand, upCard, { double: false, split: true }) === 'stand') return 'double-stand';
     return play;
 }
 
@@ -95,7 +98,8 @@ const PAGES: Page[] = [
             y = s.section(page, y + 18, 'Standard', [
                 'Full rounds of blackjack against the dealer with a bankroll. Place a bet with the chips, Deal, and play every hand to the end.',
                 'Your bankroll is saved, so it carries over between visits. Leaving mid-round forfeits the bet on the table.',
-                `Settings (between rounds) choose the number of decks (${DECK_OPTIONS.join(', ')}) and the starting bankroll; changing the bankroll starts a fresh table.`,
+                `Settings (between rounds) choose the number of decks (${DECK_OPTIONS.join(', ')}), the starting bankroll and the table rules; changing the bankroll starts a fresh table and fresh stats.`,
+                'The line along the bottom counts rounds won, lost and pushed, blackjacks, your best win and your peak balance.',
                 `If your balance drops below the smallest chip ($${MIN_BET}), the bankroll resets to its starting amount.`,
             ]);
         },
@@ -103,19 +107,19 @@ const PAGES: Page[] = [
     {
         title: 'Table Rules',
         build: (s, page) => {
-            const payout = `${Math.round(BLACKJACK_PAYOUT * 5)} to 5`;
+            const payout = `${Math.round(BLACKJACK_PAYOUTS[DEFAULT_RULES.blackjackPays] * 5)} to 5`;
             let y = PANEL.y + 34;
             y = s.section(page, y, 'The goal', [
                 'Beat the dealer by finishing closer to 21 without going over. Cards 2–10 count their number, J Q K count 10, and an Ace counts 1 or 11.',
                 'A hand with an Ace counted as 11 is "soft" (A,6 is soft 17); going over 21 is a bust and loses at once.',
             ]);
-            y = s.section(page, y + 14, 'This table', [
+            y = s.section(page, y + 14, 'The default table', [
                 `Blackjack (an Ace and a ten-card) pays ${payout}. Other wins pay 1 to 1, and a tie is a push.`,
                 'The dealer stands on all 17s, including soft 17, and peeks for blackjack when showing an Ace or a ten.',
                 'Double down on any first two cards: double the bet, take exactly one more card. Doubling after a split is allowed.',
                 `Split a pair into two hands, up to ${MAX_HANDS} hands. Split Aces get one card each.`,
                 'Insurance is offered when the dealer shows an Ace. It costs half your bet and pays 2 to 1 if the dealer has blackjack.',
-                'There is no surrender.',
+                'Standard\'s Settings can pay blackjack 3 to 2, have the dealer hit soft 17, turn off doubling after a split, or allow late surrender (R: give up the first two cards for half the bet back). Ask the Dealer follows the table\'s rules; Training and the charts always use the ones above.',
             ]);
             s.section(page, y + 14, 'Betting', [
                 `Click the $${CHIPS.join(' / $')} chips to build a bet, Clear to take it back, then Deal.`,
@@ -130,6 +134,7 @@ const PAGES: Page[] = [
                 ['S', 'Stand: keep your total'],
                 ['D', 'Double down'],
                 ['P', 'Split a pair'],
+                ['R', 'Surrender, when the table allows it (Standard)'],
                 ['A', 'Ask the dealer for advice'],
                 ['Space / Enter', 'Deal (Standard)  ·  Next hand (Training)'],
                 ['Y', 'Yes: take insurance, or tip the dealer (Standard)'],
@@ -138,7 +143,7 @@ const PAGES: Page[] = [
                 ['Esc', 'Back to the menu (this screen)'],
             ];
             const top = PANEL.y + 46;
-            const step = 50;
+            const step = 46;
             const keyX = LEFT + 90;
             keys.forEach(([key, action], i) => {
                 const y = top + i * step;

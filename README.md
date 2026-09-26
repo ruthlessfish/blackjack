@@ -23,16 +23,24 @@ no money.
 
 One-on-one blackjack against the dealer, played with chips.
 
-- Blackjack pays 6 to 5.
-- The dealer stands on all 17s and peeks for blackjack.
+- By default blackjack pays 6 to 5, the dealer stands on all 17s, doubling after a split is allowed, and
+  there is no surrender. The settings panel can change each of these rules (see below).
+- The dealer peeks for blackjack.
 - Insurance is offered when the dealer shows an Ace and pays 2 to 1.
-- Double down on any two-card hand, including after a split.
+- Double down on any two-card hand, including after a split (unless that rule is off).
 - Split pairs up to four hands; split Aces get one card each.
 - The shoe is reshuffled when a quarter of it is left.
-- Keyboard play: `H` hit, `S` stand, `D` double, `P` split, `Y` / `N` take or decline insurance, and
+- Late surrender, when turned on, gives up the first two cards for half the bet back (rounded down), after
+  the dealer has peeked.
+- Keyboard play: `H` hit, `S` stand, `D` double, `P` split, `R` surrender, `Y` / `N` take or decline insurance, and
   `Space` or `Enter` to deal.
-- The settings panel sets the shoe size (1, 2, 4, 6 or 8 decks) and the starting bankroll ($100 to $5000).
-  The default is 6 decks and $500.
+- The settings panel sets the shoe size (1, 2, 4, 6 or 8 decks), the starting bankroll ($100 to $5000), and
+  the table rules: blackjack pays 3:2 or 6:5, the dealer hits or stands on soft 17, double after split on
+  or off, and late surrender on or off. The default is 6 decks and $500. Ask the Dealer follows the table's
+  rules; Training always drills the default rules.
+- A line along the bottom counts rounds, wins, losses and pushes, blackjacks, the biggest single-round
+  win and the peak balance. It restarts when the bankroll setting changes, but not when the balance runs
+  out.
 
 The balance is saved after every change, so reloading in the middle of a round forfeits that round's bet.
 

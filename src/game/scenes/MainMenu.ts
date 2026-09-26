@@ -1,6 +1,7 @@
 import { Scene } from 'phaser';
 import { loadTable, loadTraining } from '../storage';
 import { CHIPS, DEFAULT_SETTINGS } from '../logic/constants';
+import { rulesSummary } from '../logic/settings';
 import { accuracyPct } from '../logic/TrainingSession';
 import { Button } from '../ui/Button';
 import { chipFrame } from '../ui/atlas';
@@ -50,7 +51,7 @@ export class MainMenu extends Scene {
             onClick: () => this.scene.start('Standard'),
         });
 
-        addText(this, cx, 568, 'Blackjack pays 6 to 5  ·  Dealer stands on all 17s  ·  Insurance pays 2 to 1', {
+        addText(this, cx, 568, rulesSummary(table ? table.rules : DEFAULT_SETTINGS.rules), {
             size: 16,
             color: COLOR.dim,
         });

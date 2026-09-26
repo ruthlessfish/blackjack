@@ -1,7 +1,8 @@
-import type { Rank, Settings, Suit } from './types';
+import type { BlackjackPayout, Rank, Settings, Suit, TableRules } from './types';
 
 export const STARTING_BALANCE = 500;
-export const BLACKJACK_PAYOUT = 1.2; // 6:5; a whole number for any bet that is a multiple of $5
+/** What a natural wins per dollar staked. 6:5 is a whole number on any multiple of $5; 3:2 rounds down. */
+export const BLACKJACK_PAYOUTS: Record<BlackjackPayout, number> = { '3:2': 1.5, '6:5': 1.2 };
 export const MAX_HANDS = 4;
 export const RESHUFFLE_FRACTION = 0.25; // reshuffle when fewer than this share of cards remain
 export const SWEEP_DELAY_MS = 3000; // how long a settled round stays on the table
@@ -26,9 +27,18 @@ export const DECK_OPTIONS: readonly number[] = [1, 2, 4, 6, 8];
 /** Starting bankrolls the settings panel offers (Phaser has no text input). */
 export const BANKROLL_OPTIONS: readonly number[] = [100, 250, 500, 1000, 2500, 5000];
 
+/** The house rules a new table starts with, and the only rules Training ever uses. */
+export const DEFAULT_RULES: TableRules = {
+    blackjackPays: '6:5',
+    dealerHitsSoft17: false,
+    doubleAfterSplit: true,
+    surrender: false,
+};
+
 export const DEFAULT_SETTINGS: Settings = {
     decks: 6,
     startingBalance: STARTING_BALANCE,
+    rules: DEFAULT_RULES,
 };
 
 export const SUITS: Suit[] = ['♠', '♥', '♦', '♣'];

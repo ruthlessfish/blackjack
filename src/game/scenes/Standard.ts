@@ -1,7 +1,7 @@
 import { GameObjects, Scene, Scenes } from 'phaser';
 import { CHIPS, TIP_AMOUNT } from '../logic/constants';
 import { StandardGame } from '../logic/StandardGame';
-import type { Availability, PlayerHandView, ViewState } from '../logic/types';
+import type { Availability, PlayerHandView, TableStats, ViewState } from '../logic/types';
 import { loadTable, saveTable } from '../storage';
 import { BACK_BLUE, BACK_RED, CARD_H } from '../ui/atlas';
 import { BetStack } from '../ui/BetStack';
@@ -23,6 +23,7 @@ const DEALER_Y = 138;
 const PLAYER_Y = 572;
 
 const CONTROLS_Y = 700;
+const STATS_Y = 752;
 
 const OUTCOME_COLOR = {
     win: COLOR.win,
@@ -56,6 +57,7 @@ export class Standard extends Scene {
     private message!: GameObjects.Text;
     private balanceText!: GameObjects.Text;
     private betText!: GameObjects.Text;
+    private statsText!: GameObjects.Text;
     private shoe!: Pile;
     private discard!: Pile;
     private settings!: SettingsModal;
@@ -70,6 +72,7 @@ export class Standard extends Scene {
     private standButton!: Button;
     private doubleButton!: Button;
     private splitButton!: Button;
+    private surrenderButton!: Button;
     private insuranceYes!: Button;
     private insuranceNo!: Button;
     private askButton!: Button;
@@ -128,6 +131,7 @@ export class Standard extends Scene {
         bind('S', () => this.table.stand());
         bind('D', () => this.table.double());
         bind('P', () => this.table.split());
+        bind('R', () => this.table.surrender());
         bind('A', () => this.table.askDealer());
         // Insurance and the tip are never offered together, and each ignores Y/N outside its phase.
         bind('Y', () => {
@@ -170,6 +174,7 @@ export class Standard extends Scene {
         });
         this.message = addText(this, CANVAS_W / 2, 258, '', { size: 26, bold: true, stroke: true });
         this.message.setWordWrapWidth(760);
+        this.statsText = addText(this, CANVAS_W / 2, STATS_Y, '', { size: 15, color: COLOR.dim });
 
         this.activeMark = this.add.graphics();
         this.betStack = new BetStack(this, CANVAS_W / 2, PLAYER_Y);
@@ -199,12 +204,14 @@ export class Standard extends Scene {
             onClick: () => this.table.deal(),
         });
 
-        const play = (x: number, label: string, onClick: () => void): Button =>
-            new Button(this, x, y, { label, width: 116, height: 56, fontSize: 24, onClick });
-        this.hitButton = play(300, 'Hit', () => this.table.hit());
-        this.standButton = play(430, 'Stand', () => this.table.stand());
-        this.doubleButton = play(560, 'Double', () => this.table.double());
-        this.splitButton = play(690, 'Split', () => this.table.split());
+        const play = (x: number, label: string, onClick: () => void, width = 116): Button =>
+            new Button(this, x, y, { label, width, height: 56, fontSize: 24, onClick });
+        this.hitButton = play(180, 'Hit', () => this.table.hit());
+        this.standButton = play(304, 'Stand', () => this.table.stand());
+        this.doubleButton = play(428, 'Double', () => this.table.double());
+        this.splitButton = play(552, 'Split', () => this.table.split());
+        // Only shown when the table allows surrender and the opening hand is untouched.
+        this.surrenderButton = play(692, 'Surrender', () => this.table.surrender(), 144);
 
         this.insuranceYes = new Button(this, 400, y, {
             label: 'Take insurance',
@@ -284,7 +291,18 @@ export class Standard extends Scene {
             .setText(v.message.text)
             .setColor(v.message.kind ? OUTCOME_COLOR[v.message.kind] : COLOR.text);
 
+        this.statsText.setText(this.statsLine(v.stats));
         this.renderControls(v);
+    }
+
+    private statsLine(s: TableStats): string {
+        return [
+            `Rounds ${s.rounds}`,
+            `W ${s.wins}  L ${s.losses}  P ${s.pushes}`,
+            `Blackjacks ${s.blackjacks}`,
+            `Best win $${s.biggestWin}`,
+            `Peak $${s.peakBalance}`,
+        ].join('  ·  ');
     }
 
     /**
@@ -344,6 +362,7 @@ export class Standard extends Scene {
         let title = `${h.label}  ${scoreLabel(h.total, h.soft)}  ·  $${h.bet}`;
         if (h.blackjack) title += '  BLACKJACK!';
         else if (h.outcome === 'win') title += '  WIN';
+        else if (h.surrendered) title += '  SURRENDER';
         else if (h.outcome === 'push') title += '  PUSH';
         else if (h.outcome === 'lose') title += h.total > 21 ? '  BUST' : '  LOSE';
         return title;
@@ -366,6 +385,7 @@ export class Standard extends Scene {
         this.showAvailability(this.standButton, v.can.stand);
         this.showAvailability(this.doubleButton, v.can.double);
         this.showAvailability(this.splitButton, v.can.split);
+        this.showAvailability(this.surrenderButton, v.can.surrender);
         this.showAvailability(this.insuranceYes, v.can.insurance);
         this.showAvailability(this.insuranceNo, v.can.insurance);
         this.showAvailability(this.askButton, v.can.ask);

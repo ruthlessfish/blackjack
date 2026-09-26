@@ -1,5 +1,5 @@
 import { DEFAULT_SETTINGS } from './logic/constants';
-import { sanitizeSavedTable } from './logic/settings';
+import { parseCount, sanitizeSavedTable } from './logic/settings';
 import type { SavedTable, SavedTraining } from './logic/types';
 
 const TRAINING_KEY = 'blackjack3.training';
@@ -27,18 +27,13 @@ function write(key: string, value: unknown): void {
     }
 }
 
-const count = (value: unknown): number => {
-    const n = Math.floor(Number(value));
-    return Number.isFinite(n) && n > 0 ? n : 0;
-};
-
 export function loadTraining(): SavedTraining {
     const raw = (read(TRAINING_KEY) ?? {}) as Partial<Record<keyof SavedTraining, unknown>>;
-    const handsSeen = count(raw.handsSeen);
+    const handsSeen = parseCount(raw.handsSeen);
     return {
         handsSeen,
-        handsCorrect: Math.min(count(raw.handsCorrect), handsSeen),
-        bestStreak: count(raw.bestStreak),
+        handsCorrect: Math.min(parseCount(raw.handsCorrect), handsSeen),
+        bestStreak: parseCount(raw.bestStreak),
     };
 }
 

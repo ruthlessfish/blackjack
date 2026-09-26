@@ -2,8 +2,8 @@
 // and prints who won each one: Dealer, Player, or Push.
 //   npm run simulate           one winner per line
 //   npm run simulate -- -v     a table of up card, starting cards, final totals, and winner
-import { Card, Hand, MIN_BET, StandardGame, basicStrategy } from '../src/game/logic';
-import type { CardView } from '../src/game/logic';
+import { Card, Hand, MIN_BET, StandardGame, basicStrategy } from '@/game/logic';
+import type { CardView } from '@/game/logic';
 
 // The project has no @types/node; this is all the script needs from Node.
 declare const process: { argv: string[] };
@@ -38,7 +38,8 @@ function playHand(game: StandardGame): Row {
         const view = game.view();
         const active = view.playerHands.find((h) => h.active)!;
         const hand = new Hand(active.cards.map((c) => new Card(c.rank, c.suit)));
-        const action = basicStrategy(hand, new Card(upCard.rank, upCard.suit), view.can.double === 'ok', view.can.split === 'ok');
+        const legal = { double: view.can.double === 'ok', split: view.can.split === 'ok', surrender: view.can.surrender === 'ok' };
+        const action = basicStrategy(hand, new Card(upCard.rank, upCard.suit), legal, view.settings.rules);
         game[action]();
     }
 

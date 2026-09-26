@@ -1,5 +1,5 @@
 import {
-    BLACKJACK_PAYOUT,
+    BLACKJACK_PAYOUTS,
     CHIPS,
     DEALER_ACCURACY_START,
     DEALER_ACCURACY_STEP,
@@ -13,7 +13,7 @@ import { Card, toCardView } from './card';
 import { Dealer } from './dealer';
 import { PlayerHand } from './hand';
 import { Player } from './player';
-import { parseBankroll, parseDecks } from './settings';
+import { freshStats, parseBankroll, parseDecks, sanitizeRules } from './settings';
 import { Shoe } from './shoe';
 import { basicStrategy } from './strategy';
 import type {
@@ -27,6 +27,8 @@ import type {
     SavedTable,
     Scheduler,
     Settings,
+    TableRules,
+    TableStats,
     ViewState,
 } from './types';
 
@@ -45,6 +47,7 @@ const ACTION_NAME: Record<Action, string> = {
     stand: 'stand',
     double: 'double down',
     split: 'split',
+    surrender: 'surrender',
 };
 
 export interface TableOptions {
@@ -68,6 +71,9 @@ export class StandardGame {
     private player: Player;
     private dealer = new Dealer();
     private startingBalance: number;
+    private rules: TableRules;
+    /** Results since the current bankroll began; a new bankroll starts them afresh. */
+    private stats: TableStats;
     private phase: Phase = 'betting';
     private bankrollWasReset = false;
     /** The message line. Part of the state, so it can never desync from a render. */
@@ -95,8 +101,10 @@ export class StandardGame {
         this.schedule = schedule ?? timeoutScheduler;
         this.random = random ?? Math.random;
         this.startingBalance = saved ? saved.startingBalance : DEFAULT_SETTINGS.startingBalance;
+        this.rules = { ...(saved ? saved.rules : DEFAULT_SETTINGS.rules) };
         this.shoe = shoe ?? new Shoe(saved ? saved.decks : DEFAULT_SETTINGS.decks);
         this.player = new Player(saved ? saved.balance : this.startingBalance);
+        this.stats = saved ? { ...saved.stats } : freshStats(this.player.balance);
     }
 
     /** Drop the table's timers. Called when the scene shuts down. */
@@ -106,12 +114,12 @@ export class StandardGame {
 
     /** The player-adjustable settings. The shoe owns its own deck count, so it is read from there. */
     private get settings(): Settings {
-        return { decks: this.shoe.decks, startingBalance: this.startingBalance };
+        return { decks: this.shoe.decks, startingBalance: this.startingBalance, rules: { ...this.rules } };
     }
 
     /** What is worth keeping between sessions. */
     snapshot(): SavedTable {
-        return { ...this.settings, balance: this.player.balance };
+        return { ...this.settings, balance: this.player.balance, stats: { ...this.stats } };
     }
 
     // ---- Betting -----------------------------------------------------------
@@ -186,8 +194,8 @@ export class StandardGame {
     // ---- Settings ----------------------------------------------------------
 
     /**
-     * Apply the settings panel's values. The shoe and the bankroll are
-     * round-scoped, so they only move between hands. The panel is closed
+     * Apply the settings panel's values. The shoe, the bankroll and the rules
+     * are round-scoped, so they only move between hands. The panel is closed
      * mid-round, and this guards it again.
      */
     applySettings(next: Settings): void {
@@ -203,9 +211,11 @@ export class StandardGame {
             this.startingBalance = bankroll;
             this.player.resetBankroll(bankroll);
             this.player.clearBet();
+            this.stats = freshStats(bankroll);
             this.bankrollWasReset = false;
             this.setMessage(BET_PROMPT);
         }
+        this.rules = sanitizeRules(next.rules, this.rules);
         this.render();
     }
 
@@ -300,6 +310,15 @@ export class StandardGame {
         this.advance();
     }
 
+    /** Late surrender: give up the hand for half the bet back. The dealer has already peeked. */
+    surrender(): void {
+        if (this.surrenderAvailability() !== 'ok') return;
+        this.followAdvice('surrender');
+        this.player.activeHand.surrender();
+        this.render();
+        this.dealerTurn();
+    }
+
     split(): void {
         if (this.splitAvailability() !== 'ok') return;
         this.followAdvice('split');
@@ -324,7 +343,13 @@ export class StandardGame {
         if (this.phase !== 'player' || this.advice !== null) return;
         const canDouble = this.doubleAvailability() === 'ok';
         const canSplit = this.splitAvailability() === 'ok';
-        const best = basicStrategy(this.player.activeHand, this.dealer.upCard, canDouble, canSplit);
+        const canSurrender = this.surrenderAvailability() === 'ok';
+        const best = basicStrategy(
+            this.player.activeHand,
+            this.dealer.upCard,
+            { double: canDouble, split: canSplit, surrender: canSurrender },
+            this.rules,
+        );
 
         let action = best;
         const correct = this.random() * 100 < this.dealerAccuracy;
@@ -332,6 +357,7 @@ export class StandardGame {
             const legal: Action[] = ['hit', 'stand'];
             if (canDouble) legal.push('double');
             if (canSplit) legal.push('split');
+            if (canSurrender) legal.push('surrender');
             // Hit and stand are always legal, so there is always another move to offer.
             const others = legal.filter((a) => a !== best);
             action = others[Math.floor(this.random() * others.length)];
@@ -404,10 +430,10 @@ export class StandardGame {
     private dealerTurn(): void {
         this.phase = 'dealer';
 
-        // No need to draw when every player hand already busted.
-        const anyLive = this.player.hands.some((h) => !h.isBust);
+        // No need to draw when every player hand already busted or was surrendered.
+        const anyLive = this.player.hands.some((h) => !h.isBust && !h.surrendered);
         if (anyLive) {
-            this.dealer.play(() => this.draw());
+            this.dealer.play(() => this.draw(), this.rules.dealerHitsSoft17);
         } else {
             this.dealer.reveal();
         }
@@ -438,12 +464,18 @@ export class StandardGame {
         for (const hand of this.player.hands) {
             const playerBJ = single && hand.isBlackjack;
 
-            if (playerBJ && dealerBJ) {
+            if (hand.surrendered) {
+                hand.settle('lose');
+                const refund = Math.floor(hand.bet / 2);
+                this.player.pay(refund);
+                netProfit -= hand.bet - refund;
+                notes.push(`surrendered, $${refund} returned`);
+            } else if (playerBJ && dealerBJ) {
                 hand.settle('push');
                 this.player.pay(hand.bet);
             } else if (playerBJ) {
                 hand.settle('win');
-                const winnings = Math.round(hand.bet * BLACKJACK_PAYOUT);
+                const winnings = Math.floor(hand.bet * BLACKJACK_PAYOUTS[this.rules.blackjackPays]);
                 this.player.pay(hand.bet + winnings);
                 netProfit += winnings;
             } else if (dealerBJ) {
@@ -466,6 +498,7 @@ export class StandardGame {
         }
 
         const blackjack = this.paidBlackjack(this.player.hands[0]);
+        this.count(netProfit, blackjack);
         this.setMessage(
             this.settlementText(netProfit, dealerBJ, notes, blackjack),
             blackjack ? 'blackjack' : this.netOutcome(netProfit),
@@ -499,12 +532,25 @@ export class StandardGame {
             );
         }
 
+        this.stats.peakBalance = Math.max(this.stats.peakBalance, this.player.balance);
         this.phase = 'betting';
         // Carry the stake into the next round so the player can just hit Deal;
         // if the balance no longer covers it, start from zero instead.
         this.player.carryBet();
         this.render();
         this.scheduleSweep();
+    }
+
+    /** Add a settled round to the stats, once per round by its net result. */
+    private count(netProfit: number, blackjack: boolean): void {
+        const s = this.stats;
+        s.rounds++;
+        const outcome = this.netOutcome(netProfit);
+        if (outcome === 'win') s.wins++;
+        else if (outcome === 'lose') s.losses++;
+        else s.pushes++;
+        if (blackjack) s.blackjacks++;
+        s.biggestWin = Math.max(s.biggestWin, netProfit);
     }
 
     /**
@@ -551,7 +597,15 @@ export class StandardGame {
         if (this.phase !== 'player') return 'unavailable';
         const hand = this.player.activeHand;
         if (hand.cards.length !== 2 || hand.isSplitAces) return 'unavailable';
+        if (this.player.hands.length > 1 && !this.rules.doubleAfterSplit) return 'unavailable';
         return this.player.canAfford(hand.bet) ? 'ok' : 'disabled';
+    }
+
+    /** Only the untouched opening hand can surrender: not after a hit, and not after a split. */
+    private surrenderAvailability(): Availability {
+        if (this.phase !== 'player' || !this.rules.surrender) return 'unavailable';
+        const single = this.player.hands.length === 1;
+        return single && this.player.activeHand.cards.length === 2 ? 'ok' : 'unavailable';
     }
 
     /** Same split: a non-pair (or the hand cap) hides it, a short bankroll dims it. */
@@ -632,11 +686,13 @@ export class StandardGame {
                 active: this.phase === 'player' && i === this.player.activeIndex,
                 outcome: h.outcome,
                 blackjack: this.paidBlackjack(h),
+                surrendered: h.surrendered,
                 label: this.player.hands.length > 1 ? `Hand ${i + 1}` : 'You',
             })),
             advice: this.advice?.action ?? null,
             message: { ...this.message },
             settings: this.settings,
+            stats: { ...this.stats },
             chips: this.chipViews(),
             can: {
                 deal: this.betControlAvailability(),
@@ -645,6 +701,7 @@ export class StandardGame {
                 stand: availableWhen(this.phase === 'player'),
                 double: this.doubleAvailability(),
                 split: this.splitAvailability(),
+                surrender: this.surrenderAvailability(),
                 insurance: availableWhen(this.phase === 'insurance'),
                 ask: this.phase !== 'player' ? 'unavailable' : this.advice === null ? 'ok' : 'disabled',
                 tip: availableWhen(this.phase === 'tip'),

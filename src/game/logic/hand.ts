@@ -57,6 +57,7 @@ export class PlayerHand extends Hand {
     readonly isSplitAces: boolean;
     private stake: number;
     private finished = false;
+    private gaveUp = false;
     private result?: Outcome;
 
     constructor(bet: number, cards: Card[] = [], isSplitAces = false) {
@@ -78,11 +79,21 @@ export class PlayerHand extends Hand {
         return this.result;
     }
 
+    /** Surrendered: half the bet comes back and the hand is out of play. */
+    get surrendered(): boolean {
+        return this.gaveUp;
+    }
+
     doubleBet(): void {
         this.stake *= 2;
     }
 
     resolve(): void {
+        this.finished = true;
+    }
+
+    surrender(): void {
+        this.gaveUp = true;
         this.finished = true;
     }
 

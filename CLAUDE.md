@@ -82,9 +82,9 @@ is set on this texture only.
 
 ### Behaviour worth knowing
 
-- Standard checks `{balance, decks, startingBalance}` on **every** state change and writes whenever they
-  differ from what was last saved, so reloading mid-round forfeits the bet rather than undoing it. Training
-  saves after every answer.
+- Standard checks its whole `snapshot()` (balance, settings, rules, stats) on **every** state change and
+  writes whenever it differs from what was last saved, so reloading mid-round forfeits the bet rather than
+  undoing it. Training saves after every answer.
 - Training skips hands with no decision (player natural, or a dealer natural the peek would catch).
 - The best streak updates the moment the live streak passes it (blackjack2 only updated it on a miss).
 - Ask the Dealer (`A` key) works differently per mode. In Training it reveals the chart play, ends the
@@ -94,6 +94,11 @@ is set on this texture only.
   accuracy is never saved, so it resets whenever a table is created (including a return from the menu).
   `StandardGame` takes a `random` option so tests can fix the dealer's luck.
 - The bankroll setting is a row of presets (`BANKROLL_OPTIONS`) because Phaser has no text input.
+- Standard's table rules (`Settings.rules`: payout, H17, DAS, late surrender) are saved with the table and
+  passed to `basicStrategy(hand, up, legal, rules)`, so Ask the Dealer follows them. Training, and the
+  HowToPlay charts, always use `DEFAULT_RULES` (today's 6:5 / S17 / DAS / no surrender table).
+- Standard's session stats (`SavedTable.stats`) count once per round by net result. They reset when the
+  bankroll setting changes, not when the balance runs out and is refilled.
 
 ## Assets
 

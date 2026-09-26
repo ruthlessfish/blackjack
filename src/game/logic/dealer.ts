@@ -25,10 +25,10 @@ export class Dealer {
         this.holeHidden = true;
     }
 
-    /** Reveal the hole card and draw to 17 (stand on all 17s). */
-    play(draw: () => Card): void {
+    /** Reveal the hole card and draw to 17; on a soft 17, draw again only if `hitSoft17`. */
+    play(draw: () => Card, hitSoft17 = false): void {
         this.reveal();
-        while (this.hand.total < 17) {
+        while (this.hand.total < 17 || (hitSoft17 && this.hand.total === 17 && this.hand.isSoft)) {
             this.hand.add(draw());
         }
     }

@@ -1,12 +1,38 @@
+/** The house rules a Standard table plays by. Training always uses the defaults. */
+export interface TableRules {
+    blackjackPays: BlackjackPayout;
+    /** The dealer draws on a soft 17 (H17) instead of standing on all 17s (S17). */
+    dealerHitsSoft17: boolean;
+    doubleAfterSplit: boolean;
+    /** Late surrender: give up half the bet on the first two cards, after the dealer peeks. */
+    surrender: boolean;
+}
+
+export type BlackjackPayout = '3:2' | '6:5';
+
 /** Player-adjustable table options, edited in the Standard-mode settings panel. */
 export interface Settings {
     decks: number;
     startingBalance: number;
+    rules: TableRules;
+}
+
+/** Standard-mode results since the current bankroll began. Counted once per round, by its net result. */
+export interface TableStats {
+    rounds: number;
+    wins: number;
+    losses: number;
+    pushes: number;
+    blackjacks: number;
+    /** The largest net win of a single round. */
+    biggestWin: number;
+    peakBalance: number;
 }
 
 /** What Standard mode persists between sessions. */
 export interface SavedTable extends Settings {
     balance: number;
+    stats: TableStats;
 }
 
 /** What Training mode persists between sessions. */
@@ -29,7 +55,7 @@ export interface CardView {
 /** `tip` holds a settled round while the player decides whether to tip the dealer for good advice. */
 export type Phase = 'betting' | 'insurance' | 'player' | 'dealer' | 'settled' | 'tip';
 export type Outcome = 'win' | 'lose' | 'push';
-export type Action = 'hit' | 'stand' | 'double' | 'split';
+export type Action = 'hit' | 'stand' | 'double' | 'split' | 'surrender';
 
 /** How the message line is styled: a settlement outcome, or the blackjack fanfare. */
 export type MessageKind = Outcome | 'blackjack';
@@ -60,6 +86,7 @@ export interface PlayerHandView {
     outcome?: Outcome;
     /** A natural that got paid, worth celebrating. */
     blackjack: boolean;
+    surrendered: boolean;
     label: string;
 }
 
@@ -87,6 +114,7 @@ export interface ViewState {
     advice: Action | null;
     message: MessageView;
     settings: Settings;
+    stats: TableStats;
     chips: ChipView[];
     can: {
         deal: Availability;
@@ -95,6 +123,7 @@ export interface ViewState {
         stand: Availability;
         double: Availability;
         split: Availability;
+        surrender: Availability;
         /** Both insurance buttons: take it or decline. */
         insurance: Availability;
         /** Ask the dealer: shown during play, dimmed once asked for this decision. */
