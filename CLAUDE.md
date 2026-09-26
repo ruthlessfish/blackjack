@@ -13,9 +13,10 @@ everything runs in the browser and `localStorage` is the only persistence.
 - **Standard** — 1-on-1 blackjack vs the dealer, ported from `../blackjack2` minus its training features
   (no "ask dealer", strategy warnings, accuracy, or Hi-Lo count).
 
-Only `sprites.png` and `felt.png` from `public/assets` are loaded; every screen, Standard included, sits on
-the tinted `felt.png` (`table.png` is an unused leftover). Text uses a system font stack; there are no font
-files.
+Sound is synthesized with the Web Audio API in `ui/sound.ts` (there are no audio files, and Phaser's own
+audio is switched off with `audio: { noAudio: true }`). Only `sprites.png` and `felt.png` from
+`public/assets` are loaded; every screen, Standard included, sits on the tinted `felt.png` (`table.png` is
+an unused leftover). Text uses a system font stack; there are no font files.
 
 ## Commands
 
@@ -70,7 +71,9 @@ soaked from Node; scenes only draw a view object and forward clicks (they never 
   hand-copied.
 - `ui/` — `Button`, `ChipButton`, `HandView` (diffs cards so only new ones animate, flips the hole card),
   `Pile`, `BetStack`, `SettingsModal`, `hud.ts` (the top-bar stat box and Menu button), `atlas.ts` (frame
-  names), `theme.ts` (colours, fonts, backgrounds, chip labels).
+  names), `theme.ts` (colours, fonts, backgrounds, chip labels), `sound.ts` (the `sfx` singleton: every
+  sound, the mute flag, and the unlock on the first gesture that browsers require). `hud.ts` also has the
+  sound toggle (bottom-right, `M` key) that every scene adds.
 
 ### Sprite sheet
 
@@ -97,6 +100,12 @@ is set on this texture only.
 - Standard's table rules (`Settings.rules`: payout, H17, DAS, late surrender) are saved with the table and
   passed to `basicStrategy(hand, up, legal, rules)`, so Ask the Dealer follows them. Training, and the
   HowToPlay charts, always use `DEFAULT_RULES` (today's 6:5 / S17 / DAS / no surrender table).
+- Sounds are triggered from `ui/` and scenes, never `logic/`. `HandView` plays deal and flip sounds, and
+  `setCards` returns when its last card lands. Standard diffs each `ViewState` against the last one: a
+  bet change plays a chip, and a rise in `stats.rounds` plays the result once the cards have landed (a
+  natural settles inside `deal()`, so the phase alone can't tell). Under `game.step()` in a hidden tab,
+  tweens lag the scene clock (TweenManager keeps its own `Date.now()` time), so sound order only looks
+  right when frames run in real time.
 - Standard's session stats (`SavedTable.stats`) count once per round by net result. They reset when the
   bankroll setting changes, not when the balance runs out and is refilled.
 

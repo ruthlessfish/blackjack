@@ -16,6 +16,7 @@ import { Hand } from '../logic/hand';
 import { basicStrategy } from '../logic/strategy';
 import type { Action, Rank } from '../logic/types';
 import { Button } from '../ui/Button';
+import { addSoundToggle } from '../ui/hud';
 import { addFeltBackground, addText, CANVAS_W, COLOR, FONT_TITLE, HEX } from '../ui/theme';
 
 /** The page body sits in this rounded panel; every page lays out inside it. */
@@ -139,6 +140,7 @@ const PAGES: Page[] = [
                 ['Space / Enter', 'Deal (Standard)  ·  Next hand (Training)'],
                 ['Y', 'Yes: take insurance, or tip the dealer (Standard)'],
                 ['N', 'No: decline insurance, or refuse the tip (Standard)'],
+                ['M', 'Sound on / off (every screen)'],
                 ['← / →', 'Previous / next page (this screen)'],
                 ['Esc', 'Back to the menu (this screen)'],
             ];
@@ -256,6 +258,8 @@ export class HowToPlay extends Scene {
             p.build(this, container);
             this.pages.push(container);
         }
+
+        addSoundToggle(this);
 
         const barY = 720;
         this.prevButton = new Button(this, CANVAS_W / 2 - 170, barY, {

@@ -8,9 +8,10 @@ import { BetStack } from '../ui/BetStack';
 import { Button } from '../ui/Button';
 import { ChipButton } from '../ui/ChipButton';
 import { HandView } from '../ui/HandView';
-import { addMenuButton, addStatBox } from '../ui/hud';
+import { addMenuButton, addSoundToggle, addStatBox } from '../ui/hud';
 import { Pile } from '../ui/Pile';
 import { SettingsModal } from '../ui/SettingsModal';
+import { sfx } from '../ui/sound';
 import { addFeltBackground, addText, CANVAS_W, COLOR, HEX, scoreLabel } from '../ui/theme';
 
 /** Where dealt cards slide in from: the shoe. */
@@ -64,6 +65,8 @@ export class Standard extends Scene {
     private settingsButton!: Button;
     /** The last snapshot written to storage, so an unchanged table is not written again. */
     private lastSaved = '';
+    /** The view drawn last, so a render can tell what just happened and play its sound. */
+    private prev: ViewState | null = null;
 
     private chipButtons: { amount: number; button: ChipButton }[] = [];
     private clearButton!: Button;
@@ -87,11 +90,13 @@ export class Standard extends Scene {
         this.playerHands = [];
         this.playerTitles = [];
         this.chipButtons = [];
+        this.prev = null;
 
         addFeltBackground(this);
         this.buildHud();
         this.buildTable();
         this.buildControls();
+        addSoundToggle(this);
         this.settings = new SettingsModal(this, (next) => this.table.applySettings(next));
 
         this.lastSaved = '';
@@ -274,7 +279,7 @@ export class Standard extends Scene {
         this.shoe.set(v.shoeRemaining, v.shoeTotal, 'in shoe');
         this.discard.set(v.shoeDiscarded, v.shoeTotal, 'discarded');
 
-        this.dealerHand.setCards(v.dealer, SHOE);
+        const dealerLands = this.dealerHand.setCards(v.dealer, SHOE);
         this.dealerScore.setText(
             v.dealerTotal !== null
                 ? `Dealer ${scoreLabel(v.dealerTotal, v.dealerSoft)}`
@@ -283,7 +288,7 @@ export class Standard extends Scene {
                   : '',
         );
 
-        this.renderPlayerHands(v);
+        const playerLands = this.renderPlayerHands(v);
         // With no hands on the table the bet is shown as chips at the spot; once dealt it is on the hand titles.
         this.betStack.setAmount(v.playerHands.length === 0 ? v.betDisplay : 0);
 
@@ -293,6 +298,22 @@ export class Standard extends Scene {
 
         this.statsText.setText(this.statsLine(v.stats));
         this.renderControls(v);
+        this.playSounds(v, Math.max(dealerLands, playerLands));
+        this.prev = v;
+    }
+
+    /** Chip clicks while betting, and the result once a round settles and its last cards have landed. */
+    private playSounds(v: ViewState, cardsLandIn: number): void {
+        const prev = this.prev;
+        if (!prev) return;
+        if (prev.phase === 'betting' && v.phase === 'betting' && v.betDisplay !== prev.betDisplay) {
+            sfx.play('chip');
+        }
+        // Every settlement adds a round. A natural settles inside the deal, never showing a phase in
+        // play, so the count is the signal rather than the phase.
+        const settled = v.stats.rounds > prev.stats.rounds;
+        const kind = v.message.kind;
+        if (settled && kind) this.time.delayedCall(cardsLandIn, () => sfx.play(kind));
     }
 
     private statsLine(s: TableStats): string {
@@ -316,7 +337,8 @@ export class Standard extends Scene {
         return COLOR.text;
     }
 
-    private renderPlayerHands(v: ViewState): void {
+    /** Returns how many ms until the last newly dealt card lands. */
+    private renderPlayerHands(v: ViewState): number {
         const n = v.playerHands.length;
         const { xs, scale } = playerSlots(n);
 
@@ -338,12 +360,13 @@ export class Standard extends Scene {
 
         this.activeMark.clear();
         const cardH = CARD_H * scale;
+        let landsIn = 0;
 
         v.playerHands.forEach((h, i) => {
             const view = this.playerHands[i];
             view.setCardScale(scale);
             view.setPosition(xs[i], PLAYER_Y);
-            view.setCards(h.cards, splitAt >= 0 && i >= splitAt ? before[i - 1] : SHOE);
+            landsIn = Math.max(landsIn, view.setCards(h.cards, splitAt >= 0 && i >= splitAt ? before[i - 1] : SHOE));
 
             const title = this.playerTitles[i];
             title.setPosition(xs[i], PLAYER_Y - cardH / 2 - 24);
@@ -356,6 +379,7 @@ export class Standard extends Scene {
                     .strokeRoundedRect(xs[i] - w / 2, PLAYER_Y - cardH / 2 - 10, w, cardH + 20, 10);
             }
         });
+        return landsIn;
     }
 
     private handTitle(h: PlayerHandView): string {

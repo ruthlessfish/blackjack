@@ -1,8 +1,10 @@
 import { Scene } from 'phaser';
+import { loadMuted } from '../storage';
 import { registerSpriteFrames } from '../ui/atlas';
+import { installAudioUnlock, sfx } from '../ui/sound';
 import { addText, CANVAS_H, CANVAS_W, COLOR, HEX, TEX } from '../ui/theme';
 
-/** Loads the three image assets once, cuts the sprite frames, then hands over to the menu. */
+/** Loads the image assets once, cuts the sprite frames, sets up sound, then hands over to the menu. */
 export class Preloader extends Scene {
     constructor() {
         super('Preloader');
@@ -26,6 +28,8 @@ export class Preloader extends Scene {
 
     create() {
         registerSpriteFrames(this);
+        sfx.setMuted(loadMuted());
+        installAudioUnlock();
         this.scene.start('MainMenu');
     }
 }
