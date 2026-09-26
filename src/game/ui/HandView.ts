@@ -1,6 +1,7 @@
 import { GameObjects, Scene } from 'phaser';
 import type { CardView } from '../logic/types';
 import { CARD_W, cardFrame } from './atlas';
+import { sfx } from './sound';
 import { TEX } from './theme';
 
 const DEAL_MS = 260;
@@ -59,7 +60,12 @@ export class HandView extends GameObjects.Container {
         for (const s of this.shown) s.img.setScale(scale);
     }
 
-    setCards(cards: (CardView | null)[], dealFrom?: Point): void {
+    /**
+     * Show `cards`, animating only what changed. Returns how many ms until the
+     * last new card has landed (0 when nothing moves in), so a scene can hold a
+     * result sound until the cards are down.
+     */
+    setCards(cards: (CardView | null)[], dealFrom?: Point): number {
         const keys = cards.map(cardFrame);
         const count = cards.length;
 
@@ -69,6 +75,7 @@ export class HandView extends GameObjects.Container {
         // Several cards can arrive in one call (the dealer drawing to 17). They come one after
         // another, and only once a hole card has finished turning over.
         let wait = 0;
+        let landsIn = 0;
 
         for (let i = 0; i < count; i++) {
             const target = this.slotX(i, count);
@@ -85,6 +92,7 @@ export class HandView extends GameObjects.Container {
                 existing.key = keys[i];
                 existing.x = target;
                 wait = 2 * FLIP_MS;
+                landsIn = Math.max(landsIn, wait);
                 continue;
             }
 
@@ -104,10 +112,13 @@ export class HandView extends GameObjects.Container {
                     delay: wait,
                     duration: DEAL_MS,
                     ease: 'Cubic.easeOut',
+                    onStart: () => sfx.play('deal'),
                 });
+                landsIn = Math.max(landsIn, wait + DEAL_MS);
                 wait += DEAL_STAGGER_MS;
             }
         }
+        return landsIn;
     }
 
     private slotX(i: number, count: number): number {
@@ -128,6 +139,7 @@ export class HandView extends GameObjects.Container {
         // A card still flying in is finished off first, so it cannot be left mid-air or faded.
         this.scene.tweens.killTweensOf(img);
         img.setPosition(x, 0).setAlpha(1);
+        sfx.play('flip');
         this.scene.tweens.add({
             targets: img,
             scaleX: 0,

@@ -4,7 +4,8 @@ import type { Action } from '../logic/types';
 import { loadTraining, saveTraining } from '../storage';
 import { Button } from '../ui/Button';
 import { HandView } from '../ui/HandView';
-import { addMenuButton, addStatBox } from '../ui/hud';
+import { addMenuButton, addSoundToggle, addStatBox } from '../ui/hud';
+import { sfx } from '../ui/sound';
 import { TEX, addFeltBackground, addText, CANVAS_W, COLOR } from '../ui/theme';
 
 /** A correct answer moves on by itself after this long; a wrong one waits for the player. */
@@ -58,6 +59,7 @@ export class Training extends Scene {
         this.buildTable();
         this.buildControls();
         this.bindKeys();
+        addSoundToggle(this);
 
         this.render();
     }
@@ -165,6 +167,7 @@ export class Training extends Scene {
         if (!this.session.answer(action)) return;
         saveTraining(this.session.snapshot());
         this.render();
+        sfx.play(this.session.view().feedback?.correct ? 'correct' : 'wrong');
 
         if (this.session.view().feedback?.correct) {
             this.advanceTimer = this.time.delayedCall(AUTO_ADVANCE_MS, () => this.next());

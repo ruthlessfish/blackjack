@@ -4,6 +4,7 @@ import { CHIPS, DEFAULT_SETTINGS } from '../logic/constants';
 import { rulesSummary } from '../logic/settings';
 import { accuracyPct } from '../logic/TrainingSession';
 import { Button } from '../ui/Button';
+import { addSoundToggle } from '../ui/hud';
 import { chipFrame } from '../ui/atlas';
 import { addFeltBackground, addText, CANVAS_W, COLOR, FONT_TITLE, TEX } from '../ui/theme';
 
@@ -64,6 +65,7 @@ export class MainMenu extends Scene {
             onClick: () => this.scene.start('HowToPlay'),
         });
         this.input.keyboard!.on('keydown-H', () => this.scene.start('HowToPlay'));
+        addSoundToggle(this);
 
         addText(this, cx, 752, '© 2026 Shane Pearson. All rights reserved.', { size: 13, color: COLOR.dim });
     }

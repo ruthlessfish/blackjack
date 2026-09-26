@@ -4,6 +4,7 @@ import type { SavedTable, SavedTraining } from './logic/types';
 
 const TRAINING_KEY = 'blackjack3.training';
 const TABLE_KEY = 'blackjack3.table';
+const SOUND_KEY = 'blackjack3.sound';
 
 /**
  * localStorage can be missing, full, or blocked (private windows, embedded
@@ -49,4 +50,13 @@ export function loadTable(): SavedTable | null {
 
 export function saveTable(saved: SavedTable): void {
     write(TABLE_KEY, saved);
+}
+
+/** Whether sound is off. Anything but a saved `true` means sound is on. */
+export function loadMuted(): boolean {
+    return (read(SOUND_KEY) as { muted?: unknown } | null)?.muted === true;
+}
+
+export function saveMuted(muted: boolean): void {
+    write(SOUND_KEY, { muted });
 }

@@ -14,6 +14,8 @@ const config: Types.Core.GameConfig = {
     height: CANVAS_H,
     parent: 'game-container',
     backgroundColor: COLOR.felt,
+    // Every sound is synthesized in ui/sound.ts, so Phaser's own audio (and its AudioContext) is off.
+    audio: { noAudio: true },
     scale: {
         mode: Scale.FIT,
         autoCenter: Scale.CENTER_BOTH

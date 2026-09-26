@@ -44,6 +44,12 @@ One-on-one blackjack against the dealer, played with chips.
 
 The balance is saved after every change, so reloading in the middle of a round forfeits that round's bet.
 
+### Sound
+
+Cards, chips and results have sound effects, synthesized in the browser (there are no audio files).
+The speaker button in the bottom-right corner of every screen, or the `M` key, turns sound off and on,
+and the setting is saved.
+
 ## Getting started
 
 [Node.js](https://nodejs.org) is required.
