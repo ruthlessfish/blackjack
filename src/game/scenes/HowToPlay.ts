@@ -1,5 +1,6 @@
 import { GameObjects, Scene } from 'phaser';
-import { Card } from '../logic/card';
+import { Card } from '../logic';
+import { cellLabel, chartCellId } from '../logic';
 import {
     ASK_RECHARGE_HANDS,
     BLACKJACK_PAYOUTS,
@@ -14,7 +15,8 @@ import {
 } from '../logic/constants';
 import { Hand } from '../logic/hand';
 import { basicStrategy } from '../logic/strategy';
-import type { Action, Rank } from '../logic/types';
+import type { Action, CellId, Rank } from '../logic/types';
+import { loadTraining } from '../storage';
 import { Button } from '../ui/Button';
 import { addSoundToggle } from '../ui/hud';
 import { addFeltBackground, addText, CANVAS_W, COLOR, FONT_TITLE, HEX } from '../ui/theme';
@@ -71,13 +73,28 @@ const PAIR_ROWS: ChartRow[] = (['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A
     cards: [r, r],
 }));
 
-/** What the chart says for these two cards against this up card, straight from the Training scorer. */
-function chartCell(cards: [Rank, Rank], up: Rank): Cell {
+/** What the chart says for these two cards against this up card, straight from the Training scorer, and which cell that is. */
+function chartCell(cards: [Rank, Rank], up: Rank): { cell: Cell; id: CellId } {
     const hand = new Hand(cards.map((r) => new Card(r, '♠')));
     const upCard = new Card(up, '♠');
+    const id = chartCellId(hand, upCard);
     const play = basicStrategy(hand, upCard, { double: true, split: true });
-    if (play === 'double' && basicStrategy(hand, upCard, { double: false, split: true }) === 'stand') return 'double-stand';
-    return play;
+    if (play === 'double' && basicStrategy(hand, upCard, { double: false, split: true }) === 'stand') {
+        return { cell: 'double-stand', id };
+    }
+    return { cell: play, id };
+}
+
+/** Outline colour for a cell still being missed (COLOR.lose as a number). */
+const MISS_HEX = 0xff8a8a;
+/** How many cells the Mistakes page lists by name. */
+const MOST_MISSED = 5;
+
+/** Where the scene was opened from, and which page to show first. */
+export interface HowToPlayData {
+    page?: 'mistakes';
+    /** The scene Back returns to; the menu by default. */
+    back?: string;
 }
 
 interface Page {
@@ -93,7 +110,8 @@ const PAGES: Page[] = [
             y = s.section(page, y, 'Training', [
                 'Drill Basic Strategy one hand at a time. You make only the first move, and it is scored against the chart.',
                 'A correct answer moves on by itself; after a wrong one the right play is shown and you press Next.',
-                'Hands with no decision to make (a blackjack for you, or one the dealer would peek) are skipped.',
+                'Pick which hands to deal on the left (keys 1–4): All, Hard, Soft or Pairs. Every square of those charts comes up about as often as any other, never a blackjack.',
+                'A square you miss comes up more often until you get it right; the Mistakes chart (K) outlines the ones you are still missing.',
                 'The top bar tracks hands played, % correct, your live streak and your best streak. Stats are saved.',
             ]);
             y = s.section(page, y + 18, 'Standard', [
@@ -137,15 +155,17 @@ const PAGES: Page[] = [
                 ['P', 'Split a pair'],
                 ['R', 'Surrender, when the table allows it (Standard)'],
                 ['A', 'Ask the dealer for advice'],
+                ['1 – 4', 'Deal All / Hard / Soft / Pairs (Training)'],
+                ['K', 'Your mistakes chart (Training)'],
                 ['Space / Enter', 'Deal (Standard)  ·  Next hand (Training)'],
                 ['Y', 'Yes: take insurance, or tip the dealer (Standard)'],
                 ['N', 'No: decline insurance, or refuse the tip (Standard)'],
                 ['M', 'Sound on / off (every screen)'],
                 ['← / →', 'Previous / next page (this screen)'],
-                ['Esc', 'Back to the menu (this screen)'],
+                ['Esc', 'Back to where you came from (this screen)'],
             ];
-            const top = PANEL.y + 46;
-            const step = 46;
+            const top = PANEL.y + 34;
+            const step = 39;
             const keyX = LEFT + 90;
             keys.forEach(([key, action], i) => {
                 const y = top + i * step;
@@ -214,12 +234,53 @@ const PAGES: Page[] = [
             ]);
         },
     },
+    {
+        title: 'Your Mistakes',
+        build: (s, page) => {
+            const width = s.chartWidth();
+            const gap = 48;
+            const x0 = (CANVAS_W - (2 * width + gap)) / 2;
+            const x1 = x0 + width + gap;
+            const top = PANEL.y + 16;
+            const misses = s.misses;
+            s.drawChart(page, x0, top, 'Hard', HARD_ROWS, misses);
+            s.drawChart(page, x0, top + (HARD_ROWS.length + 1) * CHART.row + 18, 'Soft', SOFT_ROWS, misses);
+            s.drawChart(page, x1, top, 'Pair', PAIR_ROWS, misses);
+
+            const worst = Object.entries(misses)
+                .sort(([a, m], [b, n]) => n - m || a.localeCompare(b))
+                .slice(0, MOST_MISSED);
+            const lines =
+                worst.length === 0
+                    ? ['No misses on record. Play some Training hands.']
+                    : [
+                          'Outlined squares are ones you are still missing; each correct answer clears one miss. Training deals them more often.',
+                          '',
+                          'Most missed:',
+                          ...worst.map(([cell, n]) => `  ${cellLabel(cell)}  ×${n}`),
+                      ];
+            const note = addText(s, x1, top + (PAIR_ROWS.length + 1) * CHART.row + 18, lines.join('\n'), {
+                size: 16,
+                color: COLOR.text,
+                align: 'left',
+                originX: 0,
+            }).setOrigin(0, 0);
+            note.setWordWrapWidth(width).setLineSpacing(4);
+            page.add(note);
+        },
+    },
 ];
 
-/** Paged instructions: the modes, the rules, the keys, the strategy chart and tipping. */
+const MISTAKES_PAGE = PAGES.length - 1;
+
+/** Paged instructions: the modes, the rules, the keys, the strategy chart, tipping and the player's own mistakes. */
 export class HowToPlay extends Scene {
     private pages: GameObjects.Container[] = [];
     private index = 0;
+    private backTo = 'MainMenu';
+    private startPage = 0;
+    /** The saved Training misses, read fresh each time the scene opens. */
+    misses: Record<CellId, number> = {};
     private heading!: GameObjects.Text;
     private indicator!: GameObjects.Text;
     private prevButton!: Button;
@@ -229,10 +290,16 @@ export class HowToPlay extends Scene {
         super('HowToPlay');
     }
 
+    init(data: HowToPlayData = {}) {
+        this.backTo = data.back ?? 'MainMenu';
+        this.startPage = data.page === 'mistakes' ? MISTAKES_PAGE : 0;
+    }
+
     create() {
         addFeltBackground(this);
         this.pages = [];
         this.index = 0;
+        this.misses = loadTraining().misses;
 
         new Button(this, 84, 40, {
             label: 'Back',
@@ -280,7 +347,7 @@ export class HowToPlay extends Scene {
         this.indicator = addText(this, CANVAS_W / 2, barY, '', { size: 20, bold: true, color: COLOR.dim });
 
         this.bindKeys();
-        this.showPage(0);
+        this.showPage(this.startPage);
     }
 
     private bindKeys(): void {
@@ -297,7 +364,7 @@ export class HowToPlay extends Scene {
     }
 
     private back(): void {
-        this.scene.start('MainMenu');
+        this.scene.start(this.backTo);
     }
 
     private showPage(i: number): void {
@@ -333,11 +400,23 @@ export class HowToPlay extends Scene {
         return CHART.label + UP_RANKS.length * CHART.cell;
     }
 
-    /** A colour-coded strategy grid, every cell asked of `basicStrategy`. */
-    drawChart(page: GameObjects.Container, x: number, y: number, corner: string, rows: ChartRow[]): void {
+    /**
+     * A colour-coded strategy grid, every cell asked of `basicStrategy`. With
+     * `misses`, cells with none are faded and the rest are outlined.
+     */
+    drawChart(
+        page: GameObjects.Container,
+        x: number,
+        y: number,
+        corner: string,
+        rows: ChartRow[],
+        misses?: Record<CellId, number>,
+    ): void {
         const { label: labelW, cell: cellW, row: rowH } = CHART;
         const g = this.add.graphics();
-        page.add(g);
+        // Outlines go on top, so a neighbour's fill never covers one.
+        const outlines = this.add.graphics();
+        page.add([g, outlines]);
 
         page.add(addText(this, x + labelW / 2, y + rowH / 2, corner, { size: 15, bold: true, color: COLOR.gold }));
         UP_RANKS.forEach((up, c) => {
@@ -349,15 +428,22 @@ export class HowToPlay extends Scene {
             const top = y + (r + 1) * rowH;
             page.add(addText(this, x + labelW / 2, top + rowH / 2, row.label, { size: 16, bold: true }));
             UP_RANKS.forEach((up, c) => {
-                const style = CELL_STYLE[chartCell(row.cards, up)];
+                const { cell, id } = chartCell(row.cards, up);
+                const style = CELL_STYLE[cell];
                 const left = x + labelW + c * cellW;
-                g.fillStyle(style.fill, 1).fillRect(left + 1, top + 1, cellW - 2, rowH - 2);
+                const missed = misses?.[id] ?? 0;
+                const alpha = misses && missed === 0 ? 0.22 : 1;
+                g.fillStyle(style.fill, alpha).fillRect(left + 1, top + 1, cellW - 2, rowH - 2);
+                if (missed > 0) {
+                    const w = missed >= 3 ? 3 : 2;
+                    outlines.lineStyle(w, MISS_HEX, 1).strokeRect(left + w / 2, top + w / 2, cellW - w, rowH - w);
+                }
                 page.add(
                     addText(this, left + cellW / 2, top + rowH / 2, style.label, {
                         size: 15,
                         bold: true,
                         color: style.ink,
-                    }),
+                    }).setAlpha(alpha === 1 ? 1 : 0.35),
                 );
             });
         });

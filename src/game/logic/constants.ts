@@ -6,7 +6,9 @@ export const BLACKJACK_PAYOUTS: Record<BlackjackPayout, number> = { '3:2': 1.5, 
 export const MAX_HANDS = 4;
 export const RESHUFFLE_FRACTION = 0.25; // reshuffle when fewer than this share of cards remain
 export const SWEEP_DELAY_MS = 3000; // how long a settled round stays on the table
-export const TRAINING_DECKS = 6;
+
+/** A missed chart cell is dealt up to this many times as often as one with no misses (one step per miss). */
+export const MAX_CELL_WEIGHT = 3;
 
 /** Hands after asking the Training dealer before the button works again. */
 export const ASK_RECHARGE_HANDS = 3;

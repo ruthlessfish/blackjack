@@ -1,6 +1,6 @@
-import { DEFAULT_SETTINGS } from './logic/constants';
-import { parseCount, sanitizeSavedTable } from './logic/settings';
-import type { SavedTable, SavedTraining } from './logic/types';
+import { DEFAULT_SETTINGS } from './logic';
+import { sanitizeSavedTable, sanitizeTraining } from './logic';
+import type { SavedTable, SavedTraining } from './logic';
 
 const TRAINING_KEY = 'blackjack3.training';
 const TABLE_KEY = 'blackjack3.table';
@@ -29,13 +29,7 @@ function write(key: string, value: unknown): void {
 }
 
 export function loadTraining(): SavedTraining {
-    const raw = (read(TRAINING_KEY) ?? {}) as Partial<Record<keyof SavedTraining, unknown>>;
-    const handsSeen = parseCount(raw.handsSeen);
-    return {
-        handsSeen,
-        handsCorrect: Math.min(parseCount(raw.handsCorrect), handsSeen),
-        bestStreak: parseCount(raw.bestStreak),
-    };
+    return sanitizeTraining(read(TRAINING_KEY));
 }
 
 export function saveTraining(saved: SavedTraining): void {

@@ -1,10 +1,10 @@
-import { ASK_RECHARGE_HANDS, DEFAULT_RULES, TRAINING_DECKS } from './constants';
+import { ASK_RECHARGE_HANDS, DEFAULT_RULES } from './constants';
 import { toCardView } from './card';
+import { buildHand, chartCellId, handType, pickCell, type DealtHand } from './chart';
 import { Dealer } from './dealer';
 import { Hand } from './hand';
-import { Shoe } from './shoe';
 import { basicStrategy } from './strategy';
-import type { Action, SavedTraining, TrainingView } from './types';
+import type { Action, CellId, HandFilter, SavedTraining, TrainingView } from './types';
 
 /** How each move is named in feedback text. */
 const ACTION_NAME: Record<Action, string> = {
@@ -20,13 +20,23 @@ export function accuracyPct(handsSeen: number, handsCorrect: number): number | n
     return handsSeen ? (handsCorrect / handsSeen) * 100 : null;
 }
 
+export interface TrainingOptions {
+    /** Drives the cell picked and the cards built for it; `Math.random` by default. */
+    random?: () => number;
+    /** Replaces the whole deal, so a test can put exact cards on the table. */
+    dealHand?: () => DealtHand;
+}
+
 /**
  * One Basic Strategy drill: deal a hand, take a single move, score it.
  * Only the first move is ever played, so there is no hit, no dealer
  * play-out and no money. Like `StandardGame`, it knows nothing of Phaser.
+ *
+ * There is no shoe: each deal picks a chart cell the filter allows (cells
+ * still being missed a little more often) and builds two cards that make it.
  */
 export class TrainingSession {
-    private shoe: Shoe;
+    private readonly dealHand: () => DealtHand;
     private player = new Hand();
     private dealer = new Dealer();
     private feedback: TrainingView['feedback'] = null;
@@ -39,31 +49,46 @@ export class TrainingSession {
     private handsCorrect: number;
     private streak = 0;
     private bestStreak: number;
+    private filter: HandFilter;
+    private misses: Record<CellId, number>;
 
-    /** `shoe` lets a test stack the deck; otherwise a fresh training shoe is used. */
-    constructor(saved: SavedTraining, shoe?: Shoe) {
-        this.shoe = shoe ?? new Shoe(TRAINING_DECKS);
+    constructor(saved: SavedTraining, opts: TrainingOptions = {}) {
+        const random = opts.random ?? Math.random;
+        this.dealHand = opts.dealHand ?? (() => buildHand(pickCell(this.filter, this.misses, random), random));
         this.handsSeen = saved.handsSeen;
         this.handsCorrect = saved.handsCorrect;
         this.bestStreak = saved.bestStreak;
-        this.deal();
+        this.filter = saved.filter;
+        this.misses = { ...saved.misses };
+        this.dealFresh();
     }
 
-    /**
-     * Deal the next hand. Hands with no decision to make (a player natural, or a
-     * dealer natural the peek would catch) are skipped so every hand dealt is one
-     * worth answering.
-     */
+    /** Deal the next hand. */
     deal(): void {
         // The hand the dealer was asked on does not count towards the recharge.
         if (this.dealerSays === null && this.recharge > 0) this.recharge--;
+        this.dealFresh();
+    }
+
+    /** Put a new hand on the table, with no bookkeeping for the one it replaces. */
+    private dealFresh(): void {
+        const { player, dealer } = this.dealHand();
+        this.player = new Hand(player);
+        this.dealer.reset(dealer);
         this.dealerSays = null;
-        do {
-            if (this.shoe.needsReshuffle()) this.shoe.reset();
-            this.player = new Hand([this.shoe.draw(), this.shoe.draw()]);
-            this.dealer.reset([this.shoe.draw(), this.shoe.draw()]);
-        } while (this.player.isBlackjack || (this.dealer.shouldPeek && this.dealer.hand.isBlackjack));
         this.feedback = null;
+    }
+
+    /**
+     * Deal only this kind of hand from now on. An unanswered hand of another kind
+     * is swapped for one that fits; it was never played, so the recharge does not tick.
+     * Returns true when the hand was swapped.
+     */
+    setFilter(filter: HandFilter): boolean {
+        this.filter = filter;
+        if (this.feedback !== null || filter === 'all' || handType(this.player) === filter) return false;
+        this.dealFresh();
+        return true;
     }
 
     /**
@@ -109,6 +134,7 @@ export class TrainingSession {
             } else {
                 this.streak = 0;
             }
+            this.recordMiss(chartCellId(this.player, this.dealer.upCard), correct);
         }
 
         this.feedback = {
@@ -120,12 +146,20 @@ export class TrainingSession {
         return true;
     }
 
-    /** Zero the lifetime totals and the best streak. */
+    /** A miss adds one to the cell; a correct answer takes one off, so a cell clears once it is learned. */
+    private recordMiss(cell: CellId, correct: boolean): void {
+        const count = (this.misses[cell] ?? 0) + (correct ? -1 : 1);
+        if (count > 0) this.misses[cell] = count;
+        else delete this.misses[cell];
+    }
+
+    /** Zero the lifetime totals, the best streak and the misses. The filter stays. */
     resetStats(): void {
         this.handsSeen = 0;
         this.handsCorrect = 0;
         this.streak = 0;
         this.bestStreak = 0;
+        this.misses = {};
     }
 
     /** What is worth keeping between sessions. */
@@ -134,15 +168,18 @@ export class TrainingSession {
             handsSeen: this.handsSeen,
             handsCorrect: this.handsCorrect,
             bestStreak: this.bestStreak,
+            filter: this.filter,
+            misses: { ...this.misses },
         };
     }
 
     private handLabel(): string {
-        if (this.player.isPair) {
+        const type = handType(this.player);
+        if (type === 'pair') {
             const value = this.player.cards[0].value;
             return value === 11 ? 'Pair of Aces' : `Pair of ${value}s`;
         }
-        return `${this.player.isSoft ? 'Soft' : 'Hard'} ${this.player.total}`;
+        return `${type === 'soft' ? 'Soft' : 'Hard'} ${this.player.total}`;
     }
 
     view(): TrainingView {
@@ -167,6 +204,7 @@ export class TrainingSession {
             accuracy: accuracyPct(this.handsSeen, this.handsCorrect),
             streak: this.streak,
             bestStreak: this.bestStreak,
+            filter: this.filter,
         };
     }
 }

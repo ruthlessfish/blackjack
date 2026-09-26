@@ -9,6 +9,7 @@ import {
     sanitizeSavedTable,
     sanitizeSettings,
     sanitizeStats,
+    sanitizeTraining,
 } from '@/game/logic/settings';
 
 describe('parseDecks', () => {
@@ -104,6 +105,61 @@ describe('sanitizeStats', () => {
             biggestWin: 30,
             peakBalance: 400,
         });
+    });
+});
+
+describe('sanitizeTraining', () => {
+    const FRESH = { handsSeen: 0, handsCorrect: 0, bestStreak: 0, filter: 'all', misses: {} };
+
+    it('keeps a valid record', () => {
+        const saved = {
+            handsSeen: 40,
+            handsCorrect: 31,
+            bestStreak: 12,
+            filter: 'soft',
+            misses: { 'soft:18:9': 2, 'pair:A:10': 1, 'hard:8:5': 3 },
+        };
+        expect(sanitizeTraining(saved)).toEqual(saved);
+    });
+
+    it.each([null, undefined, 'junk', 42, {}, []])('falls back to a fresh record for %j', (raw) => {
+        expect(sanitizeTraining(raw)).toEqual(FRESH);
+    });
+
+    it('loads a save from before the filter and misses', () => {
+        expect(sanitizeTraining({ handsSeen: 9, handsCorrect: 7, bestStreak: 4 })).toEqual({
+            ...FRESH,
+            handsSeen: 9,
+            handsCorrect: 7,
+            bestStreak: 4,
+        });
+    });
+
+    it('never has more correct answers than hands seen', () => {
+        expect(sanitizeTraining({ handsSeen: 3, handsCorrect: 10 }).handsCorrect).toBe(3);
+    });
+
+    it.each(['pairs', 'Hard', 1, null])('turns an unknown filter %j into all', (filter) => {
+        expect(sanitizeTraining({ filter }).filter).toBe('all');
+    });
+
+    it('keeps only real chart cells with a positive whole count', () => {
+        const misses = {
+            'hard:16:10': 2.8,
+            'soft:21:5': 1,
+            'hard:4:5': 1,
+            'pair:J:3': 1,
+            'soft:18:9': 0,
+            'pair:8:A': -3,
+            'hard:12:4': 'x',
+            'hard:13:2': NaN,
+            'pair:9:7': '2',
+        };
+        expect(sanitizeTraining({ misses }).misses).toEqual({ 'hard:16:10': 2, 'pair:9:7': 2 });
+    });
+
+    it('ignores misses that are not an object', () => {
+        expect(sanitizeTraining({ misses: 'hard:16:10' }).misses).toEqual({});
     });
 });
 

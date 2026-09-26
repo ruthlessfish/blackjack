@@ -9,7 +9,8 @@ A Phaser 4 blackjack game with two separate modes, on top of the
 everything runs in the browser and `localStorage` is the only persistence.
 
 - **Training** — one hand at a time, only the first move is played and scored against Basic Strategy.
-  Tracks hands seen / correct, a live streak, and a best streak that survives reloads.
+  Tracks hands seen / correct, a live streak, a best streak that survives reloads, a hand-type filter, and
+  outstanding misses per chart cell (shown on HowToPlay's "Your Mistakes" page).
 - **Standard** — 1-on-1 blackjack vs the dealer, ported from `../blackjack2` minus its training features
   (no "ask dealer", strategy warnings, accuracy, or Hi-Lo count).
 
@@ -34,7 +35,8 @@ npm run simulate     # 100 Basic Strategy hands vs the Standard dealer; `-- -v` 
 Tests are Vitest and cover `logic/` only (rules, settlement, the strategy chart, the shoe); there is no
 linter, and `tsc --noEmit` is the static check. `StandardGame` takes `{ saved, shoe, schedule }` options:
 a test passes a `shoe` to stack the cards (see `ScriptedShoe` in `StandardGame.test.ts`) and a `schedule`
-it winds by hand (`manualClock`) to control the auto-sweep; the scene passes Phaser's clock. In dev,
+it winds by hand (`manualClock`) to control the auto-sweep; the scene passes Phaser's clock.
+`TrainingSession` takes `{ random, dealHand }`: `dealHand` puts exact cards on the table in tests. In dev,
 `window.__phaser` is the Phaser `Game`, so a browser session can read state, e.g.
 `__phaser.scene.getScene('Standard').table.view()` or `getScene('Training').session.view()`.
 
@@ -60,15 +62,15 @@ soaked from Node; scenes only draw a view object and forward clicks (they never 
 
 - `logic/` — `Card/Deck/Shoe/Hand/Player/Dealer/strategy` (ported from blackjack2; `Hand` is just cards,
   `PlayerHand` adds the bet and outcome, and `Player` changes its state only through named methods),
-  `StandardGame`
+  `chart.ts` (chart cells `type:row:up`: `chartCellId`, `pickCell`, `buildHand`), `StandardGame`
   (the rules controller; emits a `ViewState` through an `onChange` callback and exposes `view()` /
   `snapshot()` / `dispose()`), `TrainingSession` (deal, `answer()`, stats; exposes `TrainingView`),
   `settings.ts` (sanitising), `types.ts`, `constants.ts`.
 - `storage.ts` — the only `localStorage` access; every read/write is in try/catch and sanitised on load.
 - `scenes/` — `Preloader` → `MainMenu` → `Training` | `Standard` | `HowToPlay`. `Preloader` loads the two
   images and cuts the sprite frames. `HowToPlay` is paged instructions; its strategy charts are built by
-  calling `basicStrategy()` cell by cell, and its numbers come from `logic/constants.ts`, so neither is
-  hand-copied.
+  calling `basicStrategy()` cell by cell (and keyed by `chartCellId`), and its numbers come from
+  `logic/constants.ts`, so neither is hand-copied.
 - `ui/` — `Button`, `ChipButton`, `HandView` (diffs cards so only new ones animate, flips the hole card),
   `Pile`, `BetStack`, `SettingsModal`, `hud.ts` (the top-bar stat box and Menu button), `atlas.ts` (frame
   names), `theme.ts` (colours, fonts, backgrounds, chip labels), `sound.ts` (the `sfx` singleton: every
@@ -88,7 +90,12 @@ is set on this texture only.
 - Standard checks its whole `snapshot()` (balance, settings, rules, stats) on **every** state change and
   writes whenever it differs from what was last saved, so reloading mid-round forfeits the bet rather than
   undoing it. Training saves after every answer.
-- Training skips hands with no decision (player natural, or a dealer natural the peek would catch).
+- Training has no shoe. Each deal picks a chart cell the filter (All / Hard / Soft / Pairs) allows, weighted
+  by `cellWeight` (1 + outstanding misses, capped at `MAX_CELL_WEIGHT`), and `buildHand` makes two cards for
+  it, never a player natural or a dealer natural the peek would catch. A miss adds one to the cell in
+  `SavedTraining.misses`, a correct answer takes one off (hands the dealer was asked about don't count), and
+  Reset stats clears them. HowToPlay's last page reads them to fade the clean cells and outline the missed
+  ones; Training opens it with `{ page: 'mistakes', back: 'Training' }`.
 - The best streak updates the moment the live streak passes it (blackjack2 only updated it on a miss).
 - Ask the Dealer (`A` key) works differently per mode. In Training it reveals the chart play, ends the
   live streak, leaves that hand out of Hands/Correct, and recharges over the next `ASK_RECHARGE_HANDS`

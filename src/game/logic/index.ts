@@ -1,4 +1,5 @@
 export * from './card';
+export * from './chart';
 export * from './constants';
 export * from './dealer';
 export * from './deck';

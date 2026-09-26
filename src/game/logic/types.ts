@@ -35,11 +35,21 @@ export interface SavedTable extends Settings {
     stats: TableStats;
 }
 
+/** Which chart a two-card hand is read from. A pair is a pair even when it could be played as a hard total. */
+export type HandType = 'hard' | 'soft' | 'pair';
+/** The hands Training deals: every chart, or just one. */
+export type HandFilter = 'all' | HandType;
+/** One chart cell, `type:row:up`, e.g. `hard:16:10`, `soft:18:9`, `pair:8:A`. */
+export type CellId = string;
+
 /** What Training mode persists between sessions. */
 export interface SavedTraining {
     handsSeen: number;
     handsCorrect: number;
     bestStreak: number;
+    filter: HandFilter;
+    /** Outstanding misses per chart cell: a miss adds one, a correct answer takes one off. Only counts above 0 are kept. */
+    misses: Record<CellId, number>;
 }
 
 export type Suit = '♠' | '♥' | '♦' | '♣';
@@ -155,4 +165,5 @@ export interface TrainingView {
     accuracy: number | null;
     streak: number;
     bestStreak: number;
+    filter: HandFilter;
 }

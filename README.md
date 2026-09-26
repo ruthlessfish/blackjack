@@ -17,7 +17,11 @@ no money.
 
 - Tracks hands seen, hands correct, a live streak and a best streak.
 - Stats and the best streak survive reloads.
-- Hands with no decision to make (a player natural, or a dealer natural) are skipped.
+- Pick which hands are dealt: All, Hard, Soft or Pairs (keys 1–4). Each deal picks a square of those charts
+  (hand × dealer up card) and builds cards for it, so rare hands come up as often as common ones, and there
+  is never a natural on either side.
+- A square you miss is dealt more often (up to 3×) until you answer it right; the Mistakes chart (K) outlines
+  the squares you are still missing and lists the worst.
 
 ### Standard
 

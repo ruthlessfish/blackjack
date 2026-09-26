@@ -1,6 +1,6 @@
 import { GameObjects, Scene, Time } from 'phaser';
 import { TrainingSession } from '../logic/TrainingSession';
-import type { Action } from '../logic/types';
+import type { Action, HandFilter } from '../logic/types';
 import { loadTraining, saveTraining } from '../storage';
 import { Button } from '../ui/Button';
 import { HandView } from '../ui/HandView';
@@ -24,6 +24,14 @@ const ACTIONS: { action: Action; label: string; key: string }[] = [
     { action: 'split', label: 'Split', key: 'P' },
 ];
 
+/** The hand-type picker down the left edge, on keys 1-4. */
+const FILTERS: { filter: HandFilter; label: string; key: string }[] = [
+    { filter: 'all', label: 'All', key: 'ONE' },
+    { filter: 'hard', label: 'Hard', key: 'TWO' },
+    { filter: 'soft', label: 'Soft', key: 'THREE' },
+    { filter: 'pair', label: 'Pairs', key: 'FOUR' },
+];
+
 /**
  * Basic Strategy drill. One hand at a time, one move each, scored against the
  * chart. All the rules live in `TrainingSession`; this scene draws its view.
@@ -38,6 +46,7 @@ export class Training extends Scene {
     private feedback!: GameObjects.Text;
     private statValues!: Record<'hands' | 'correct' | 'accuracy' | 'streak' | 'best', GameObjects.Text>;
     private actionButtons = new Map<Action, Button>();
+    private filterButtons = new Map<HandFilter, Button>();
     private nextButton!: Button;
     private askButton!: Button;
     private resetButton!: Button;
@@ -53,6 +62,7 @@ export class Training extends Scene {
         this.advanceTimer = null;
         this.resetTimer = null;
         this.actionButtons.clear();
+        this.filterButtons.clear();
 
         addFeltBackground(this);
         this.buildHud();
@@ -115,6 +125,21 @@ export class Training extends Scene {
 
         this.feedback = addText(this, cx, 528, '', { size: 30, bold: true, stroke: true });
         this.feedback.setWordWrapWidth(900);
+
+        // Level with "DEALER SHOWS", in the empty column left of the cards.
+        const fx = 84;
+        addText(this, fx, 116, 'DEAL', { size: 16, bold: true, color: COLOR.dim, stroke: true });
+        FILTERS.forEach((f, i) => {
+            const button = new Button(this, fx, 162 + i * 62, {
+                label: f.label,
+                sublabel: `key ${i + 1}`,
+                width: 124,
+                height: 52,
+                fontSize: 21,
+                onClick: () => this.setFilter(f.filter),
+            });
+            this.filterButtons.set(f.filter, button);
+        });
     }
 
     private buildControls(): void {
@@ -151,12 +176,23 @@ export class Training extends Scene {
             fontSize: 24,
             onClick: () => this.ask(),
         });
+
+        new Button(this, 174, 704, {
+            label: 'Mistakes',
+            sublabel: 'key K',
+            width: 220,
+            height: 58,
+            fontSize: 24,
+            onClick: () => this.showMistakes(),
+        });
     }
 
     private bindKeys(): void {
         const kb = this.input.keyboard!;
         for (const a of ACTIONS) kb.on(`keydown-${a.key}`, () => this.choose(a.action));
+        for (const f of FILTERS) kb.on(`keydown-${f.key}`, () => this.setFilter(f.filter));
         kb.on('keydown-A', () => this.ask());
+        kb.on('keydown-K', () => this.showMistakes());
         kb.on('keydown-SPACE', () => this.next());
         kb.on('keydown-ENTER', () => this.next());
     }
@@ -177,6 +213,22 @@ export class Training extends Scene {
     /** Reveal the play. It costs the streak, so there is nothing new to save. */
     private ask(): void {
         if (this.session.askDealer()) this.render();
+    }
+
+    /** Deal only this kind of hand. An unanswered hand of another kind is swapped at once. */
+    private setFilter(filter: HandFilter): void {
+        // A swapped hand deals in fresh, as a new hand does.
+        if (this.session.setFilter(filter)) {
+            this.dealerHand.clear();
+            this.playerHand.clear();
+        }
+        saveTraining(this.session.snapshot());
+        this.render();
+    }
+
+    /** The strategy chart with the cells still being missed outlined; its Back comes here. */
+    private showMistakes(): void {
+        this.scene.start('HowToPlay', { page: 'mistakes', back: 'Training' });
     }
 
     /** Move to the next hand. Also the manual path for a correct answer, skipping the wait. */
@@ -235,6 +287,7 @@ export class Training extends Scene {
         }
 
         for (const [action, button] of this.actionButtons) button.setEnabled(v.can[action]);
+        for (const [filter, button] of this.filterButtons) button.setSelected(filter === v.filter);
         this.nextButton.setVisible(v.feedback !== null && !v.feedback.correct);
         this.askButton.setEnabled(v.can.ask);
         // The hand the dealer was asked on shows the full wait; it starts counting on the next one.

@@ -1,5 +1,6 @@
+import { isCellId } from './chart';
 import { BLACKJACK_PAYOUTS, DECK_OPTIONS, MIN_BET } from './constants';
-import type { BlackjackPayout, SavedTable, Settings, TableRules, TableStats } from './types';
+import type { BlackjackPayout, CellId, HandFilter, SavedTable, SavedTraining, Settings, TableRules, TableStats } from './types';
 
 /** A shoe size the settings panel offers, or null for anything else. */
 export function parseDecks(value: unknown): number | null {
@@ -75,6 +76,31 @@ export function sanitizeSavedTable(raw: unknown, defaults: Settings): SavedTable
     const record = raw as { balance?: unknown; stats?: unknown } | null;
     const balance = parseBankroll(record?.balance) ?? settings.startingBalance;
     return { ...settings, balance, stats: sanitizeStats(record?.stats, balance) };
+}
+
+const HAND_FILTERS: readonly HandFilter[] = ['all', 'hard', 'soft', 'pair'];
+
+/**
+ * Saved Training progress, each field checked on its own. Correct answers never
+ * exceed hands seen, and only real chart cells with a positive count are kept.
+ */
+export function sanitizeTraining(raw: unknown): SavedTraining {
+    const next = (raw ?? {}) as Partial<Record<keyof SavedTraining, unknown>>;
+    const handsSeen = parseCount(next.handsSeen);
+    const misses: Record<CellId, number> = {};
+    if (typeof next.misses === 'object' && next.misses !== null) {
+        for (const [cell, value] of Object.entries(next.misses)) {
+            const count = parseCount(value);
+            if (isCellId(cell) && count > 0) misses[cell] = count;
+        }
+    }
+    return {
+        handsSeen,
+        handsCorrect: Math.min(parseCount(next.handsCorrect), handsSeen),
+        bestStreak: parseCount(next.bestStreak),
+        filter: HAND_FILTERS.includes(next.filter as HandFilter) ? (next.filter as HandFilter) : 'all',
+        misses,
+    };
 }
 
 /** The rules as one line of text, e.g. "Blackjack pays 6 to 5  ·  Dealer stands on all 17s  ·  …". */
