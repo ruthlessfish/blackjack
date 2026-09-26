@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project state
 
-A Phaser 4 blackjack game with two separate modes, on top of the
+A Phaser 4 blackjack game with three separate modes, on top of the
 [phaserjs/template-vite-ts](https://github.com/phaserjs/template-vite-ts) starter. There is no server:
 everything runs in the browser and `localStorage` is the only persistence.
 
@@ -13,6 +13,9 @@ everything runs in the browser and `localStorage` is the only persistence.
   outstanding misses per chart cell (shown on HowToPlay's "Your Mistakes" page).
 - **Standard** — 1-on-1 blackjack vs the dealer, ported from `../blackjack2` minus its training features
   (no "ask dealer", strategy warnings, accuracy, or Hi-Lo count).
+- **Counting** — Hi-Lo drill: cards flip off a shoe on a timer (Slow / Medium / Fast), and every 8–16 cards
+  play stops for the running count (every other quiz also asks the true count). Tracks answers, accuracy,
+  streak / best streak and average answer time; saved like Training.
 
 Sound is synthesized with the Web Audio API in `ui/sound.ts` (there are no audio files, and Phaser's own
 audio is switched off with `audio: { noAudio: true }`). Only `sprites.png` and `felt.png` from
@@ -36,9 +39,11 @@ Tests are Vitest and cover `logic/` only (rules, settlement, the strategy chart,
 linter, and `tsc --noEmit` is the static check. `StandardGame` takes `{ saved, shoe, schedule }` options:
 a test passes a `shoe` to stack the cards (see `ScriptedShoe` in `StandardGame.test.ts`) and a `schedule`
 it winds by hand (`manualClock`) to control the auto-sweep; the scene passes Phaser's clock.
-`TrainingSession` takes `{ random, dealHand }`: `dealHand` puts exact cards on the table in tests. In dev,
-`window.__phaser` is the Phaser `Game`, so a browser session can read state, e.g.
-`__phaser.scene.getScene('Standard').table.view()` or `getScene('Training').session.view()`.
+`TrainingSession` takes `{ random, dealHand }`: `dealHand` puts exact cards on the table in tests.
+`CountingSession` takes `{ shoe, random, now }`: a stacked shoe, the quiz interval, and the clock answer
+times are read from. In dev, `window.__phaser` is the Phaser `Game`, so a browser session can read state,
+e.g. `__phaser.scene.getScene('Standard').table.view()` or `getScene('Training').session.view()`
+(Counting keeps its running count out of the view; read `getScene('Counting').session.runningCount`).
 
 ## Architecture
 
@@ -65,10 +70,11 @@ soaked from Node; scenes only draw a view object and forward clicks (they never 
   `chart.ts` (chart cells `type:row:up`: `chartCellId`, `pickCell`, `buildHand`), `StandardGame`
   (the rules controller; emits a `ViewState` through an `onChange` callback and exposes `view()` /
   `snapshot()` / `dispose()`), `TrainingSession` (deal, `answer()`, stats; exposes `TrainingView`),
+  `CountingSession` (`hiLoValue`, `trueCount`; `dealCard()` / `answer()` / `resume()`; exposes `CountingView`),
   `settings.ts` (sanitising), `types.ts`, `constants.ts`.
 - `storage.ts` — the only `localStorage` access; every read/write is in try/catch and sanitised on load.
-- `scenes/` — `Preloader` → `MainMenu` → `Training` | `Standard` | `HowToPlay`. `Preloader` loads the two
-  images and cuts the sprite frames. `HowToPlay` is paged instructions; its strategy charts are built by
+- `scenes/` — `Preloader` → `MainMenu` → `Training` | `Standard` | `Counting` | `HowToPlay`. `Preloader`
+  loads the two images and cuts the sprite frames. `HowToPlay` is paged instructions; its strategy charts are built by
   calling `basicStrategy()` cell by cell (and keyed by `chartCellId`), and its numbers come from
   `logic/constants.ts`, so neither is hand-copied.
 - `ui/` — `Button`, `ChipButton`, `HandView` (diffs cards so only new ones animate, flips the hole card),
@@ -96,6 +102,11 @@ is set on this texture only.
   `SavedTraining.misses`, a correct answer takes one off (hands the dealer was asked about don't count), and
   Reset stats clears them. HowToPlay's last page reads them to fade the clean cells and outline the missed
   ones; Training opens it with `{ page: 'mistakes', back: 'Training' }`.
+- Counting's scene owns the card clock (a looping timer at `COUNT_SPEED_MS[speed]`); `CountingSession` only
+  says what a card or an answer does. The true count divides by decks left rounded to the nearest half deck
+  (never below 0.5) and rounds toward zero. The quiz interval is capped at the cards left, and the shoe is
+  reshuffled (count back to 0) on `resume()` past `RESHUFFLE_FRACTION`. Phaser has no text input, so answers
+  are typed through the scene's own key handler (digits, `-`, Backspace, ↑/↓, Enter).
 - The best streak updates the moment the live streak passes it (blackjack2 only updated it on a miss).
 - Ask the Dealer (`A` key) works differently per mode. In Training it reveals the chart play, ends the
   live streak, leaves that hand out of Hands/Correct, and recharges over the next `ASK_RECHARGE_HANDS`

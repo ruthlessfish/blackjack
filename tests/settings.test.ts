@@ -7,6 +7,7 @@ import {
     rulesSummary,
     sanitizeRules,
     sanitizeSavedTable,
+    sanitizeCounting,
     sanitizeSettings,
     sanitizeStats,
     sanitizeTraining,
@@ -168,5 +169,32 @@ describe('rulesSummary', () => {
         expect(rulesSummary(DEFAULT_RULES)).toBe(
             'Blackjack pays 6 to 5  ·  Dealer stands on all 17s  ·  Double after split  ·  No surrender',
         );
+    });
+});
+
+describe('sanitizeCounting', () => {
+    const FRESH = { quizzes: 0, correct: 0, bestStreak: 0, totalAnswerMs: 0, decks: 6, speed: 'medium' };
+
+    it('keeps a valid record', () => {
+        const saved = { quizzes: 30, correct: 24, bestStreak: 9, totalAnswerMs: 84000, decks: 2, speed: 'fast' };
+        expect(sanitizeCounting(saved)).toEqual(saved);
+    });
+
+    it.each([null, 'junk', 42, [], {}])('falls back to a fresh record for %j', (raw) => {
+        expect(sanitizeCounting(raw)).toEqual(FRESH);
+    });
+
+    it('never lets correct answers exceed quizzes', () => {
+        expect(sanitizeCounting({ quizzes: 5, correct: 9 }).correct).toBe(5);
+    });
+
+    it('drops a deck count or speed the settings do not offer', () => {
+        const saved = sanitizeCounting({ quizzes: 3, correct: 1, decks: 3, speed: 'ludicrous' });
+        expect(saved.decks).toBe(6);
+        expect(saved.speed).toBe('medium');
+    });
+
+    it('drops answer time with no quizzes to average it over', () => {
+        expect(sanitizeCounting({ quizzes: 0, totalAnswerMs: 5000 }).totalAnswerMs).toBe(0);
     });
 });

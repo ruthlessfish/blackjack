@@ -1,6 +1,7 @@
 export * from './card';
 export * from './chart';
 export * from './constants';
+export * from './CountingSession';
 export * from './dealer';
 export * from './deck';
 export * from './hand';

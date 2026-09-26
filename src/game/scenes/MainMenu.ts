@@ -1,5 +1,5 @@
 import { Scene } from 'phaser';
-import { loadTable, loadTraining } from '../storage';
+import { loadCounting, loadTable, loadTraining } from '../storage';
 import { CHIPS, DEFAULT_SETTINGS } from '../logic/constants';
 import { rulesSummary } from '../logic/settings';
 import { accuracyPct } from '../logic/TrainingSession';
@@ -31,32 +31,43 @@ export class MainMenu extends Scene {
         const training = loadTraining();
         const pct = accuracyPct(training.handsSeen, training.handsCorrect);
         const accuracy = pct === null ? 'no hands yet' : `${Math.round(pct)}% correct`;
+        const counting = loadCounting();
+        const countPct = accuracyPct(counting.quizzes, counting.correct);
+        const countAccuracy = countPct === null ? 'no answers yet' : `${Math.round(countPct)}% correct`;
         const table = loadTable();
         const bankroll = table ? table.balance : DEFAULT_SETTINGS.startingBalance;
 
-        new Button(this, cx, 350, {
+        new Button(this, cx, 304, {
             label: 'Training',
             sublabel: `Drill Basic Strategy  ·  best streak ${training.bestStreak}  ·  ${accuracy}`,
             width: 680,
-            height: 108,
-            fontSize: 38,
+            height: 92,
+            fontSize: 36,
             variant: 'primary',
             onClick: () => this.scene.start('Training'),
         });
-        new Button(this, cx, 490, {
+        new Button(this, cx, 410, {
+            label: 'Counting',
+            sublabel: `Practise the Hi-Lo count  ·  best streak ${counting.bestStreak}  ·  ${countAccuracy}`,
+            width: 680,
+            height: 92,
+            fontSize: 36,
+            onClick: () => this.scene.start('Counting'),
+        });
+        new Button(this, cx, 516, {
             label: 'Standard',
             sublabel: `Play against the dealer  ·  bankroll $${bankroll}`,
             width: 680,
-            height: 108,
-            fontSize: 38,
+            height: 92,
+            fontSize: 36,
             onClick: () => this.scene.start('Standard'),
         });
 
-        addText(this, cx, 568, rulesSummary(table ? table.rules : DEFAULT_SETTINGS.rules), {
+        addText(this, cx, 576, rulesSummary(table ? table.rules : DEFAULT_SETTINGS.rules), {
             size: 16,
             color: COLOR.dim,
         });
-        new Button(this, cx, 626, {
+        new Button(this, cx, 650, {
             label: 'How to Play',
             sublabel: 'key H',
             width: 240,
@@ -74,16 +85,16 @@ export class MainMenu extends Scene {
     private decorate(): void {
         // Kept below the buttons and clear of the footer line, in the two bottom corners.
         const fan: { frame: string; x: number; y: number; angle: number }[] = [
-            { frame: 'A♠', x: 110, y: 640, angle: -14 },
-            { frame: 'K♥', x: 150, y: 634, angle: 0 },
-            { frame: 'Q♦', x: 190, y: 640, angle: 14 },
+            { frame: 'A♠', x: 110, y: 668, angle: -14 },
+            { frame: 'K♥', x: 150, y: 662, angle: 0 },
+            { frame: 'Q♦', x: 190, y: 668, angle: 14 },
         ];
         for (const c of fan) {
             this.add.image(c.x, c.y, TEX.sprites, c.frame).setScale(1.05).setAngle(c.angle);
         }
         CHIPS.forEach((amount, i) => {
             this.add
-                .image(840 + i * 34, 646 - (i % 2) * 18, TEX.sprites, chipFrame(amount))
+                .image(840 + i * 34, 674 - (i % 2) * 18, TEX.sprites, chipFrame(amount))
                 .setScale(1.3)
                 .setAngle(i * 12 - 10);
         });

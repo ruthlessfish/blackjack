@@ -1,6 +1,17 @@
 import { isCellId } from './chart';
-import { BLACKJACK_PAYOUTS, DECK_OPTIONS, MIN_BET } from './constants';
-import type { BlackjackPayout, CellId, HandFilter, SavedTable, SavedTraining, Settings, TableRules, TableStats } from './types';
+import { BLACKJACK_PAYOUTS, COUNT_DEFAULT_DECKS, COUNT_SPEED_MS, DECK_OPTIONS, MIN_BET } from './constants';
+import type {
+    BlackjackPayout,
+    CellId,
+    CountSpeed,
+    HandFilter,
+    SavedCounting,
+    SavedTable,
+    SavedTraining,
+    Settings,
+    TableRules,
+    TableStats,
+} from './types';
 
 /** A shoe size the settings panel offers, or null for anything else. */
 export function parseDecks(value: unknown): number | null {
@@ -100,6 +111,22 @@ export function sanitizeTraining(raw: unknown): SavedTraining {
         bestStreak: parseCount(next.bestStreak),
         filter: HAND_FILTERS.includes(next.filter as HandFilter) ? (next.filter as HandFilter) : 'all',
         misses,
+    };
+}
+
+const isSpeed = (value: unknown): value is CountSpeed => Object.keys(COUNT_SPEED_MS).includes(value as string);
+
+/** Saved Counting progress, each field checked on its own. Correct answers never exceed quizzes. */
+export function sanitizeCounting(raw: unknown): SavedCounting {
+    const next = (raw ?? {}) as Partial<Record<keyof SavedCounting, unknown>>;
+    const quizzes = parseCount(next.quizzes);
+    return {
+        quizzes,
+        correct: Math.min(parseCount(next.correct), quizzes),
+        bestStreak: parseCount(next.bestStreak),
+        totalAnswerMs: quizzes ? parseCount(next.totalAnswerMs) : 0,
+        decks: parseDecks(next.decks) ?? COUNT_DEFAULT_DECKS,
+        speed: isSpeed(next.speed) ? next.speed : 'medium',
     };
 }
 

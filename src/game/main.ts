@@ -1,3 +1,4 @@
+import { Counting } from './scenes/Counting';
 import { HowToPlay } from './scenes/HowToPlay';
 import { MainMenu } from './scenes/MainMenu';
 import { Preloader } from './scenes/Preloader';
@@ -26,6 +27,7 @@ const config: Types.Core.GameConfig = {
         MainMenu,
         Training,
         Standard,
+        Counting,
         HowToPlay
     ]
 };

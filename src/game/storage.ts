@@ -1,9 +1,10 @@
 import { DEFAULT_SETTINGS } from './logic';
-import { sanitizeSavedTable, sanitizeTraining } from './logic';
-import type { SavedTable, SavedTraining } from './logic';
+import { sanitizeCounting, sanitizeSavedTable, sanitizeTraining } from './logic';
+import type { SavedCounting, SavedTable, SavedTraining } from './logic';
 
 const TRAINING_KEY = 'blackjack3.training';
 const TABLE_KEY = 'blackjack3.table';
+const COUNTING_KEY = 'blackjack3.counting';
 const SOUND_KEY = 'blackjack3.sound';
 
 /**
@@ -34,6 +35,14 @@ export function loadTraining(): SavedTraining {
 
 export function saveTraining(saved: SavedTraining): void {
     write(TRAINING_KEY, saved);
+}
+
+export function loadCounting(): SavedCounting {
+    return sanitizeCounting(read(COUNTING_KEY));
+}
+
+export function saveCounting(saved: SavedCounting): void {
+    write(COUNTING_KEY, saved);
 }
 
 /** The saved Standard table, or null when there is nothing (valid) to resume. */

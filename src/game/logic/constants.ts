@@ -1,4 +1,4 @@
-import type { BlackjackPayout, Rank, Settings, Suit, TableRules } from './types';
+import type { BlackjackPayout, CountSpeed, Rank, Settings, Suit, TableRules } from './types';
 
 export const STARTING_BALANCE = 500;
 /** What a natural wins per dollar staked. 6:5 is a whole number on any multiple of $5; 3:2 rounds down. */
@@ -16,6 +16,16 @@ export const ASK_RECHARGE_HANDS = 3;
 export const TIP_AMOUNT = 5;
 export const DEALER_ACCURACY_START = 50; // percent, reset every time a table is created
 export const DEALER_ACCURACY_STEP = 5;
+
+/** How long each card stays up in Counting mode, per speed setting. */
+export const COUNT_SPEED_MS: Record<CountSpeed, number> = { slow: 1500, medium: 1000, fast: 600 };
+/** Counting quizzes come after a random number of cards in this range (inclusive). */
+export const QUIZ_MIN_CARDS = 8;
+export const QUIZ_MAX_CARDS = 16;
+/** An answer slower than this counts as this long, so a walk-away can't wreck the average. */
+export const MAX_ANSWER_MS = 30000;
+/** The shoe Counting starts with. */
+export const COUNT_DEFAULT_DECKS = 6;
 
 /** Chip denominations on the table. */
 export const CHIPS: readonly number[] = [5, 25, 100];

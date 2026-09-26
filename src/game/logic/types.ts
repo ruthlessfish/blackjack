@@ -52,6 +52,22 @@ export interface SavedTraining {
     misses: Record<CellId, number>;
 }
 
+/** Counting-mode dealing pace. */
+export type CountSpeed = 'slow' | 'medium' | 'fast';
+/** Which count a Counting quiz asks for. */
+export type CountQuestion = 'running' | 'true';
+
+/** What Counting mode persists between sessions. Each question answered is one quiz. */
+export interface SavedCounting {
+    quizzes: number;
+    correct: number;
+    bestStreak: number;
+    /** Sum of answer times, each capped at `MAX_ANSWER_MS`, for the average. */
+    totalAnswerMs: number;
+    decks: number;
+    speed: CountSpeed;
+}
+
 export type Suit = '♠' | '♥' | '♦' | '♣';
 export type Rank = 'A' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K';
 
@@ -166,4 +182,28 @@ export interface TrainingView {
     streak: number;
     bestStreak: number;
     filter: HandFilter;
+}
+
+/** The Counting-mode table. The running count itself is never here; it only shows in feedback. */
+export interface CountingView {
+    /** The card just dealt; null before the first one (or after a reshuffle). */
+    card: CardView | null;
+    phase: 'dealing' | 'quiz' | 'feedback';
+    /** What is being asked while `phase` is `quiz`. */
+    question: CountQuestion | null;
+    /** The last answer's result; kept from the running answer while the true count is asked. */
+    feedback: { correct: boolean; text: string } | null;
+    /** The shoe was just shuffled and the count went back to 0. Cleared by the next card. */
+    reshuffled: boolean;
+    cardsRemaining: number;
+    shoeTotal: number;
+    quizzes: number;
+    correct: number;
+    /** Percentage 0-100, or null before the first quiz. */
+    accuracy: number | null;
+    streak: number;
+    bestStreak: number;
+    avgAnswerMs: number | null;
+    decks: number;
+    speed: CountSpeed;
 }

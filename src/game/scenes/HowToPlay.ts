@@ -1,8 +1,15 @@
 import { GameObjects, Scene } from 'phaser';
-import { Card } from '../logic';
-import { cellLabel, chartCellId } from '../logic';
 import {
+    Card,
+    cellLabel,
+    chartCellId,
     ASK_RECHARGE_HANDS,
+    COUNT_SPEED_MS,
+    QUIZ_MAX_CARDS,
+    QUIZ_MIN_CARDS,
+    RESHUFFLE_FRACTION,
+    signed,
+    trueCount,
     BLACKJACK_PAYOUTS,
     CHIPS,
     DEALER_ACCURACY_START,
@@ -12,10 +19,13 @@ import {
     MAX_HANDS,
     MIN_BET,
     TIP_AMOUNT,
-} from '../logic/constants';
-import { Hand } from '../logic/hand';
-import { basicStrategy } from '../logic/strategy';
-import type { Action, CellId, Rank } from '../logic/types';
+    Hand,
+    basicStrategy,
+    Action,
+    CellId,
+    Rank
+} from '../logic';
+
 import { loadTraining } from '../storage';
 import { Button } from '../ui/Button';
 import { addSoundToggle } from '../ui/hud';
@@ -104,7 +114,7 @@ interface Page {
 
 const PAGES: Page[] = [
     {
-        title: 'Two Ways to Play',
+        title: 'Training & Standard',
         build: (s, page) => {
             let y = PANEL.y + 34;
             y = s.section(page, y, 'Training', [
@@ -235,6 +245,26 @@ const PAGES: Page[] = [
         },
     },
     {
+        title: 'Counting Cards: Hi-Lo',
+        build: (s, page) => {
+            const secs = (ms: number) => `${ms / 1000}s`;
+            let y = PANEL.y + 30;
+            y = s.section(page, y, 'The running count', [
+                'Every card has a tag: 2–6 count +1, 7–9 count 0, and tens, faces and Aces count −1. Add up the tags as the cards appear; the total is the running count.',
+                'A full deck adds up to 0, so a fresh shoe starts at 0. A high count means more tens and Aces are left, which is good for the player.',
+            ]);
+            y = s.section(page, y + 14, 'The true count', [
+                `The running count divided by the decks left in the shoe. Judge the decks to the nearest half deck (never less than half) and round toward zero: ${signed(7)} with 3 decks left is ${signed(trueCount(7, 156))}, and ${signed(-7)} is ${signed(trueCount(-7, 156))}.`,
+            ]);
+            s.section(page, y + 14, 'Counting mode', [
+                `Cards flip off the shoe one at a time: Slow ${secs(COUNT_SPEED_MS.slow)}, Medium ${secs(COUNT_SPEED_MS.medium)} or Fast ${secs(COUNT_SPEED_MS.fast)} per card (keys 1–3). Space pauses.`,
+                `Every ${QUIZ_MIN_CARDS}–${QUIZ_MAX_CARDS} cards play stops for the running count, and every other time for the true count straight after. Type it with the number keys and − (or use ↑ / ↓), then Enter. A blank answer is 0.`,
+                `Decks (on the right) starts a fresh shoe. The shoe is reshuffled once only ${RESHUFFLE_FRACTION * 100}% is left, and the count goes back to 0.`,
+                'The top bar tracks answers, % correct, your streak, your best streak and your average answer time. Stats are saved.',
+            ]);
+        },
+    },
+    {
         title: 'Your Mistakes',
         build: (s, page) => {
             const width = s.chartWidth();
@@ -273,7 +303,7 @@ const PAGES: Page[] = [
 
 const MISTAKES_PAGE = PAGES.length - 1;
 
-/** Paged instructions: the modes, the rules, the keys, the strategy chart, tipping and the player's own mistakes. */
+/** Paged instructions: the modes, the rules, the keys, the strategy chart, tipping, counting and the player's own mistakes. */
 export class HowToPlay extends Scene {
     private pages: GameObjects.Container[] = [];
     private index = 0;
