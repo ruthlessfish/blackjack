@@ -1,7 +1,7 @@
 {
   "name": "blackjack3",
   "description": "Blackjack with Training, Counting and Standard modes, built with Phaser and Vite.",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ruthlessfish/blackjack.git"
