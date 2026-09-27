@@ -79,7 +79,7 @@ soaked from Node; scenes only draw a view object and forward clicks (they never 
   calling `basicStrategy()` cell by cell (and keyed by `chartCellId`), and its numbers come from
   `logic/constants.ts`, so neither is hand-copied.
 - `ui/` — `Button`, `ChipButton`, `HandView` (diffs cards so only new ones animate, flips the hole card),
-  `Pile`, `BetStack`, `SettingsModal`, `hud.ts` (the top-bar stat box and Menu button), `atlas.ts` (frame
+  `Pile`, `BetStack`, `SettingsModal`, `keycap.ts` (the keycaps on HowToPlay's controls page), `hud.ts` (the top-bar stat box and Menu button), `atlas.ts` (frame
   names), `theme.ts` (colours, fonts, backgrounds, chip labels), `sound.ts` (the `sfx` singleton: every
   sound, the mute flag, and the unlock on the first gesture that browsers require). `hud.ts` also has the
   sound toggle (bottom-right, `M` key) that every scene adds.
@@ -94,6 +94,8 @@ is set on this texture only.
 
 ### Behaviour worth knowing
 
+- `Shoe.reset()` burns one card after every shuffle (so `remaining` starts at `total − 1`). Standard's discard
+  pile counts it, and Counting never shows it, so it stays out of the running count.
 - Standard checks its whole `snapshot()` (balance, settings, rules, stats) on **every** state change and
   writes whenever it differs from what was last saved, so reloading mid-round forfeits the bet rather than
   undoing it. Training saves after every answer.

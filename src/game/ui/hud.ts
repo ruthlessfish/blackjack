@@ -31,7 +31,7 @@ export function addMenuButton(scene: Scene, canLeave: () => boolean = () => true
     });
     return new Button(scene, 84, 40, {
         label: 'Menu',
-        sublabel: 'Esc',
+        keys: ['Esc'],
         width: 120,
         height: 52,
         fontSize: 20,

@@ -29,6 +29,7 @@ import {
 import { loadTraining } from '../storage';
 import { Button } from '../ui/Button';
 import { addSoundToggle, switchScene } from '../ui/hud';
+import { addKeyCap } from '../ui/keycap';
 import { addFeltBackground, addText, CANVAS_W, COLOR, FONT_TITLE, HEX } from '../ui/theme';
 
 /** The page body sits in this rounded panel; every page lays out inside it. */
@@ -177,16 +178,7 @@ const PAGES: Page[] = [
             const keyX = LEFT + 90;
             keys.forEach(([key, action], i) => {
                 const y = top + i * step;
-                const w = Math.max(56, key.length * 11 + 24);
-                const cap = s.add.graphics();
-                cap.fillStyle(0x000000, 0.35).fillRoundedRect(keyX - w / 2 + 2, y - 16, w, 36, 7);
-                cap.fillStyle(0xf5f1e6, 1).fillRoundedRect(keyX - w / 2, y - 18, w, 36, 7);
-                cap.lineStyle(2, HEX.gold, 0.9).strokeRoundedRect(keyX - w / 2, y - 18, w, 36, 7);
-                page.add([
-                    cap,
-                    addText(s, keyX, y, key, { size: 18, bold: true, color: COLOR.ink }),
-                    addText(s, LEFT + 210, y, action, { size: 20, originX: 0 }),
-                ]);
+                page.add([addKeyCap(s, keyX, y, key), addText(s, LEFT + 210, y, action, { size: 20, originX: 0 })]);
             });
         },
     },
@@ -331,7 +323,7 @@ export class HowToPlay extends Scene {
 
         new Button(this, 84, 40, {
             label: 'Back',
-            sublabel: 'Esc',
+            keys: ['Esc'],
             width: 120,
             height: 52,
             fontSize: 20,

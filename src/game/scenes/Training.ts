@@ -132,7 +132,7 @@ export class Training extends Scene {
         FILTERS.forEach((f, i) => {
             const button = new Button(this, fx, 162 + i * 62, {
                 label: f.label,
-                sublabel: `key ${i + 1}`,
+                keys: [`${i + 1}`],
                 width: 124,
                 height: 52,
                 fontSize: 21,
@@ -149,7 +149,7 @@ export class Training extends Scene {
         ACTIONS.forEach((a, i) => {
             const button = new Button(this, left + width / 2 + i * (width + gap), 618, {
                 label: a.label,
-                sublabel: `key ${a.key}`,
+                keys: [a.key],
                 width,
                 height: 76,
                 fontSize: 30,
@@ -160,7 +160,7 @@ export class Training extends Scene {
 
         this.nextButton = new Button(this, CANVAS_W / 2, 704, {
             label: 'Next hand',
-            sublabel: 'Space or Enter',
+            keys: ['Space', 'Enter'],
             width: 300,
             height: 58,
             fontSize: 26,
@@ -170,7 +170,7 @@ export class Training extends Scene {
 
         this.askButton = new Button(this, 850, 704, {
             label: 'Ask dealer',
-            sublabel: 'key A',
+            keys: ['A'],
             width: 220,
             height: 58,
             fontSize: 24,
@@ -179,7 +179,7 @@ export class Training extends Scene {
 
         new Button(this, 174, 704, {
             label: 'Mistakes',
-            sublabel: 'key K',
+            keys: ['K'],
             width: 220,
             height: 58,
             fontSize: 24,
@@ -291,6 +291,7 @@ export class Training extends Scene {
         this.nextButton.setVisible(v.feedback !== null && !v.feedback.correct);
         this.askButton.setEnabled(v.can.ask);
         // The hand the dealer was asked on shows the full wait; it starts counting on the next one.
-        this.askButton.setSublabel(v.askRecharge > 0 ? `recharging (${v.askRecharge})` : 'key A');
+        if (v.askRecharge > 0) this.askButton.setSublabel(`recharging (${v.askRecharge})`);
+        else this.askButton.setKeys(['A']);
     }
 }

@@ -32,7 +32,7 @@ export class MainMenu extends Scene {
             color: COLOR.gold,
             stroke: true,
         });
-        addText(this, cx, 222, 'Pick a mode  ·  arrow keys and Enter', { size: 24, color: COLOR.text, stroke: true });
+        addText(this, cx, 222, 'Pick a mode  ·  ↑  ↓  Enter', { size: 24, color: COLOR.text, stroke: true });
 
         // The saved stats are read fresh each time the menu opens, so they are current after a session.
         const training = loadTraining();
@@ -85,7 +85,7 @@ export class MainMenu extends Scene {
         });
         new Button(this, cx, 650, {
             label: 'How to Play',
-            sublabel: 'key H',
+            keys: ['H'],
             width: 240,
             height: 58,
             fontSize: 22,

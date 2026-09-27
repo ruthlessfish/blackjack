@@ -157,8 +157,8 @@ describe('answers', () => {
         expect(s.view().question).toBe('true');
         expect(s.view().feedback?.correct).toBe(true);
 
-        // +16 over 296 cards (5.5 decks) is 2.9, which rounds toward zero.
-        expect(s.view().cardsRemaining).toBe(296);
+        // +16 over 295 cards (5.5 decks) is 2.9, which rounds toward zero.
+        expect(s.view().cardsRemaining).toBe(295);
         s.answer(2);
         expect(s.view().phase).toBe('feedback');
         expect(s.view().feedback?.correct).toBe(true);
@@ -193,7 +193,7 @@ describe('the shoe', () => {
         const v = s.view();
         expect(v.reshuffled).toBe(true);
         expect(v.card).toBeNull();
-        expect(v.cardsRemaining).toBe(52);
+        expect(v.cardsRemaining).toBe(51);
         expect(s.runningCount).toBe(0);
 
         s.dealCard();
@@ -220,7 +220,7 @@ describe('the shoe', () => {
         expect(v.phase).toBe('dealing');
         expect(v.question).toBeNull();
         expect(v.decks).toBe(2);
-        expect(v.cardsRemaining).toBe(104);
+        expect(v.cardsRemaining).toBe(103);
         expect(s.runningCount).toBe(0);
         expect(s.snapshot().decks).toBe(2);
     });

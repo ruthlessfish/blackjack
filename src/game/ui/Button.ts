@@ -6,6 +6,8 @@ export interface ButtonOptions {
     label: string;
     /** A smaller second line, e.g. a keyboard hint or a saved stat. */
     sublabel?: string;
+    /** Keyboard shortcuts, shown on the second line in place of the sublabel. */
+    keys?: string[];
     width: number;
     height: number;
     fontSize?: number;
@@ -13,6 +15,9 @@ export interface ButtonOptions {
     variant?: 'default' | 'primary';
     onClick: () => void;
 }
+
+/** Keys side by side, e.g. `Space   Enter`. */
+const keyText = (keys: string[]): string => keys.join('   ');
 
 const FILL = { default: 0x1c5a34, primary: HEX.gold } as const;
 const FILL_HOVER = { default: 0x287a48, primary: 0xffdf7a } as const;
@@ -36,7 +41,7 @@ export class Button extends GameObjects.Container {
         this.bg = scene.add.graphics();
         const size = opts.fontSize ?? 22;
         const primary = opts.variant === 'primary';
-        const hasSub = opts.sublabel !== undefined;
+        const hasSub = opts.sublabel !== undefined || opts.keys !== undefined;
 
         this.title = scene.add
             .text(0, hasSub ? -opts.height * 0.16 : 0, opts.label, {
@@ -50,7 +55,7 @@ export class Button extends GameObjects.Container {
 
         if (hasSub) {
             this.sub = scene.add
-                .text(0, opts.height * 0.24, opts.sublabel!, {
+                .text(0, opts.height * 0.24, opts.sublabel ?? keyText(opts.keys ?? []), {
                     fontFamily: FONT,
                     fontSize: `${Math.round(size * 0.62)}px`,
                     color: primary ? COLOR.ink : COLOR.dim,
@@ -92,6 +97,11 @@ export class Button extends GameObjects.Container {
     setSublabel(sublabel: string): this {
         this.sub?.setText(sublabel);
         return this;
+    }
+
+    /** Show these keys on the second line, in place of the sublabel. */
+    setKeys(keys: string[]): this {
+        return this.setSublabel(keyText(keys));
     }
 
     private setHover(hovering: boolean): void {

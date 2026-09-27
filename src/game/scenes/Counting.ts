@@ -136,7 +136,7 @@ export class Counting extends Scene {
         SPEEDS.forEach((s, i) => {
             const button = new Button(this, lx, 162 + i * 62, {
                 label: s.label,
-                sublabel: `key ${i + 1}`,
+                keys: [`${i + 1}`],
                 width: 124,
                 height: 52,
                 fontSize: 21,
@@ -178,7 +178,7 @@ export class Counting extends Scene {
 
         this.minusButton = new Button(this, cx - 160, y, {
             label: '−',
-            sublabel: '↓',
+            keys: ['↓'],
             width: 88,
             height: 72,
             fontSize: 36,
@@ -186,7 +186,7 @@ export class Counting extends Scene {
         });
         this.plusButton = new Button(this, cx + 160, y, {
             label: '+',
-            sublabel: '↑',
+            keys: ['↑'],
             width: 88,
             height: 72,
             fontSize: 36,
@@ -196,7 +196,7 @@ export class Counting extends Scene {
         // One button whose job follows the phase: pause while dealing, submit a quiz, continue after feedback.
         this.mainButton = new Button(this, cx, 684, {
             label: '',
-            sublabel: '',
+            keys: [],
             width: 300,
             height: 64,
             fontSize: 26,
@@ -398,9 +398,9 @@ export class Counting extends Scene {
         this.minusButton.setVisible(quiz);
         this.plusButton.setVisible(quiz);
 
-        if (quiz) this.mainButton.setLabel('Submit').setSublabel('Enter');
-        else if (v.phase === 'feedback') this.mainButton.setLabel('Continue').setSublabel('Space or Enter');
-        else this.mainButton.setLabel(this.paused ? 'Resume' : 'Pause').setSublabel('Space');
+        if (quiz) this.mainButton.setLabel('Submit').setKeys(['Enter']);
+        else if (v.phase === 'feedback') this.mainButton.setLabel('Continue').setKeys(['Space', 'Enter']);
+        else this.mainButton.setLabel(this.paused ? 'Resume' : 'Pause').setKeys(['Space']);
 
         for (const [speed, button] of this.speedButtons) button.setSelected(speed === v.speed);
         for (const [decks, button] of this.deckButtons) button.setSelected(decks === v.decks);

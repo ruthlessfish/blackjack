@@ -12,9 +12,10 @@ export class Shoe {
     }
 
     /**
-     * Rebuild and shuffle the shoe. `inPlay` are cards still face-up on the
-     * table (a refill that lands mid-round), which are left out so no card can
-     * end up on the table twice.
+     * Rebuild and shuffle the shoe, then burn the top card, as a dealer does
+     * after a shuffle. `inPlay` are cards still face-up on the table (a refill
+     * that lands mid-round), which are left out so no card can end up on the
+     * table twice.
      */
     reset(inPlay: readonly Card[] = []): void {
         this.cards = [];
@@ -26,6 +27,7 @@ export class Shoe {
             if (i !== -1) this.cards.splice(i, 1);
         }
         this.shuffle();
+        if (this.cards.length > 0) this.cards.pop();
     }
 
     private shuffle(): void {

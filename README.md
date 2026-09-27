@@ -49,7 +49,7 @@ One-on-one blackjack against the dealer, played with chips.
 - Insurance is offered when the dealer shows an Ace and pays 2 to 1.
 - Double down on any two-card hand, including after a split (unless that rule is off).
 - Split pairs up to four hands; split Aces get one card each.
-- The shoe is reshuffled when a quarter of it is left.
+- The shoe is reshuffled when a quarter of it is left, and the dealer burns the first card after every shuffle.
 - Late surrender, when turned on, gives up the first two cards for half the bet back (rounded down), after
   the dealer has peeked.
 - Keyboard play: `H` hit, `S` stand, `D` double, `P` split, `R` surrender, `Y` / `N` take or decline insurance, and
