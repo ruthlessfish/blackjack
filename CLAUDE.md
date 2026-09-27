@@ -19,8 +19,9 @@ everything runs in the browser and `localStorage` is the only persistence.
 
 Sound is synthesized with the Web Audio API in `ui/sound.ts` (there are no audio files, and Phaser's own
 audio is switched off with `audio: { noAudio: true }`). Only `sprites.png` and `felt.png` from
-`public/assets` are loaded; every screen, Standard included, sits on the tinted `felt.png` (`table.png` is
-an unused leftover). Text uses a system font stack; there are no font files.
+`public/assets` are loaded; every screen, Standard included, sits on the tinted `felt.png`. Text uses a
+system font stack; there are no font files. The app icons in `public/icons/` are the A♠ cut from
+`sprites.png` and padded on the felt green.
 
 ## Commands
 
@@ -118,6 +119,16 @@ is set on this texture only.
 - Standard's table rules (`Settings.rules`: payout, H17, DAS, late surrender) are saved with the table and
   passed to `basicStrategy(hand, up, legal, rules)`, so Ask the Dealer follows them. Training, and the
   HowToPlay charts, always use `DEFAULT_RULES` (today's 6:5 / S17 / DAS / no surrender table).
+- Scene changes go through `switchScene` in `ui/hud.ts`, which lets a scene leave only once: `scene.start`
+  is queued to the next frame, so two presses in one frame (Enter and Space) would otherwise start two
+  scenes on top of each other. `addMenuButton` also binds `Esc`; Standard passes a `canLeave` that closes the
+  settings panel instead when it is open. MainMenu picks a mode with the arrow keys (shared with mouse hover
+  through `Button.setSelected`) and remembers it across visits.
+- Outcome colours (`COLOR.win/lose/push`) are blue / vermilion / grey for colour-blind players, and every
+  outcome also has a word or mark (`markAnswer` adds ✓/✗; Standard's balance gets ▲/▼). On touch devices
+  `setPaddedInteractive` (`ui/click.ts`) grows each Button and ChipButton hit area by `TOUCH_PAD`, so keep
+  neighbouring controls at least that far apart. Standard's play row is packed in `layoutPlayRow`, so a
+  hidden Split leaves no gap.
 - Sounds are triggered from `ui/` and scenes, never `logic/`. `HandView` plays deal and flip sounds, and
   `setCards` returns when its last card lands. Standard diffs each `ViewState` against the last one: a
   bet change plays a chip, and a rise in `stats.rounds` plays the result once the cards have landed (a
@@ -149,4 +160,6 @@ fields that are assigned in `create()` rather than the constructor.
 Dev and prod are separate files (`vite/config.dev.mjs`, `vite/config.prod.mjs`) rather than one config
 with mode branches — a build-affecting change usually needs editing both. Both use `base: './'` (so
 `dist/` works from any subdirectory) and split `phaser` into its own manual chunk. Prod adds terser
-with two compress passes.
+with two compress passes. Both register the same `vite-plugin-pwa` options (manifest + Workbox precache of
+the built js/css/html/png); `devOptions.enabled` is false, so only the production build registers a
+service worker.

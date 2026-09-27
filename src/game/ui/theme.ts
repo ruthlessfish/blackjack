@@ -16,9 +16,11 @@ export const COLOR = {
     text: '#f5f1e6',
     dim: '#b9c9bd',
     gold: '#f2c94c',
-    win: '#7dffa1',
-    lose: '#ff8a8a',
-    push: '#ffe08a',
+    // Outcomes are blue / vermilion / grey rather than green / red, so they read with red-green
+    // colour blindness; every outcome also carries a word or symbol, never colour alone.
+    win: '#6cc4ff',
+    lose: '#ff8a5c',
+    push: '#e6e6e6',
     ink: '#10281a',
     /** The deep green behind everything: the canvas background and the modal panel. */
     felt: '#0d2f1c',
@@ -28,6 +30,7 @@ export const COLOR = {
 export const HEX = {
     gold: 0xf2c94c,
     felt: 0x0d2f1c,
+    lose: 0xff8a5c,
 } as const;
 
 /** Green multiply tint that turns the grey felt.png into a table-green. */
@@ -86,6 +89,11 @@ export function addChipLabel(scene: Scene, x: number, y: number, text: string, s
             strokeThickness: 4,
         })
         .setOrigin(0.5);
+}
+
+/** An answer's feedback with a ✓ or ✗ in front, so right and wrong differ by more than colour. */
+export function markAnswer(text: string, correct: boolean): string {
+    return `${correct ? '✓' : '✗'} ${text}`;
 }
 
 /** "12/22" for a soft hand, "17" otherwise. A soft 21 is just 21. */

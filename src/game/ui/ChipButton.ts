@@ -1,7 +1,7 @@
 import { GameObjects, Scene } from 'phaser';
 import type { Availability } from '../logic/types';
 import { chipFrame } from './atlas';
-import { bindClick } from './click';
+import { bindClick, setPaddedInteractive } from './click';
 import { addChipLabel, TEX } from './theme';
 
 /** A betting chip: the chip art with its denomination drawn on top. */
@@ -18,7 +18,7 @@ export class ChipButton extends GameObjects.Container {
         this.add([this.art, label]);
 
         this.setSize(this.art.displayWidth, this.art.displayHeight);
-        this.setInteractive({ useHandCursor: true });
+        setPaddedInteractive(this);
         this.on('pointerover', () => this.enabled && this.setScale(1.1));
         this.on('pointerout', () => this.setScale(1));
         bindClick(this, () => this.enabled && this.visible, onClick);

@@ -148,7 +148,7 @@ export class SettingsModal extends GameObjects.Container {
             const button = new Button(this.scene, x, y, {
                 label: text,
                 width,
-                height: 44,
+                height: 48,
                 fontSize: 19,
                 onClick: () => {
                     set(value);

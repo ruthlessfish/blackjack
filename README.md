@@ -48,6 +48,15 @@ One-on-one blackjack against the dealer, played with chips.
 
 The balance is saved after every change, so reloading in the middle of a round forfeits that round's bet.
 
+### Controls, accessibility and offline play
+
+- On the main menu the arrow keys pick a mode and `Enter` or `Space` starts it. In every game mode `Esc` goes
+  back to the menu (in Standard it closes the settings panel first).
+- Wins, losses and pushes are shown in blue, vermilion and grey rather than green and red, and never by
+  colour alone: hands say WIN / LOSE / PUSH, answers start with ✓ or ✗, and the balance shows ▲ or ▼.
+- On touch screens every button's tap area reaches a little past its edge.
+- The production build is a Progressive Web App: it can be installed, and once loaded it plays offline.
+
 ### Sound
 
 Cards, chips and results have sound effects, synthesized in the browser (there are no audio files).
@@ -77,7 +86,8 @@ The dev server runs on <http://localhost:8080> with hot reloading.
 Tests cover the rules in `src/game/logic/`. There is no linter configured.
 
 To deploy, upload the contents of `dist/` to any static web host. The build uses relative paths, so it works
-from a subdirectory.
+from a subdirectory. It includes a web manifest and a service worker (from `vite-plugin-pwa`), so it can be
+installed and played offline; the dev server does not register the worker.
 
 ## Project structure
 

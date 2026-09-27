@@ -4,9 +4,9 @@ import type { Action, HandFilter } from '../logic/types';
 import { loadTraining, saveTraining } from '../storage';
 import { Button } from '../ui/Button';
 import { HandView } from '../ui/HandView';
-import { addMenuButton, addSoundToggle, addStatBox } from '../ui/hud';
+import { addMenuButton, addSoundToggle, addStatBox, switchScene } from '../ui/hud';
 import { sfx } from '../ui/sound';
-import { TEX, addFeltBackground, addText, CANVAS_W, COLOR } from '../ui/theme';
+import { TEX, addFeltBackground, addText, CANVAS_W, COLOR, markAnswer } from '../ui/theme';
 
 /** A correct answer moves on by itself after this long; a wrong one waits for the player. */
 const AUTO_ADVANCE_MS = 1200;
@@ -105,7 +105,7 @@ export class Training extends Scene {
         this.resetButton = new Button(this, CANVAS_W - 84, 40, {
             label: 'Reset stats',
             width: 130,
-            height: 44,
+            height: 52,
             fontSize: 17,
             onClick: () => this.onReset(),
         });
@@ -228,7 +228,7 @@ export class Training extends Scene {
 
     /** The strategy chart with the cells still being missed outlined; its Back comes here. */
     private showMistakes(): void {
-        this.scene.start('HowToPlay', { page: 'mistakes', back: 'Training' });
+        switchScene(this, 'HowToPlay', { page: 'mistakes', back: 'Training' });
     }
 
     /** Move to the next hand. Also the manual path for a correct answer, skipping the wait. */
@@ -278,7 +278,7 @@ export class Training extends Scene {
         this.handLabel.setText(v.handLabel);
 
         if (v.feedback) {
-            this.feedback.setText(v.feedback.text).setColor(v.feedback.correct ? COLOR.win : COLOR.lose);
+            this.feedback.setText(markAnswer(v.feedback.text, v.feedback.correct)).setColor(v.feedback.correct ? COLOR.win : COLOR.lose);
         } else if (v.dealerSays) {
             const label = ACTIONS.find((a) => a.action === v.dealerSays)!.label;
             this.feedback.setText(`Dealer says: ${label}.`).setColor(COLOR.gold);

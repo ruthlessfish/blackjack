@@ -24,6 +24,13 @@ const DEALER_Y = 138;
 const PLAYER_Y = 572;
 
 const CONTROLS_Y = 700;
+/** Space between neighbouring controls; at least twice the touch padding, so padded hit areas never overlap a face. */
+const CONTROL_GAP = 16;
+const PLAY_W = 116;
+const ASK_X = 862;
+const ASK_W = 150;
+/** Left edge of the play row, chosen so all five buttons end one gap short of Ask dealer. */
+const PLAY_LEFT = ASK_X - ASK_W / 2 - CONTROL_GAP - (4 * PLAY_W + 144 + 4 * CONTROL_GAP);
 const STATS_Y = 752;
 
 const OUTCOME_COLOR = {
@@ -76,6 +83,8 @@ export class Standard extends Scene {
     private doubleButton!: Button;
     private splitButton!: Button;
     private surrenderButton!: Button;
+    /** Hit to Surrender, left to right. */
+    private playRow: Button[] = [];
     private insuranceYes!: Button;
     private insuranceNo!: Button;
     private askButton!: Button;
@@ -154,14 +163,19 @@ export class Standard extends Scene {
     // ---- Layout ------------------------------------------------------------
 
     private buildHud(): void {
-        addMenuButton(this);
+        // Esc closes the settings panel first; a second Esc leaves.
+        addMenuButton(this, () => {
+            if (!this.settings.isOpen) return true;
+            this.settings.close();
+            return false;
+        });
         this.balanceText = addStatBox(this, CANVAS_W / 2 - 92, 'BALANCE');
         this.betText = addStatBox(this, CANVAS_W / 2 + 92, 'BET');
 
         this.settingsButton = new Button(this, CANVAS_W - 84, 40, {
             label: 'Settings',
             width: 130,
-            height: 44,
+            height: 52,
             fontSize: 19,
             onClick: () => this.settings.open(this.table.view().settings),
         });
@@ -209,14 +223,16 @@ export class Standard extends Scene {
             onClick: () => this.table.deal(),
         });
 
-        const play = (x: number, label: string, onClick: () => void, width = 116): Button =>
-            new Button(this, x, y, { label, width, height: 56, fontSize: 24, onClick });
-        this.hitButton = play(180, 'Hit', () => this.table.hit());
-        this.standButton = play(304, 'Stand', () => this.table.stand());
-        this.doubleButton = play(428, 'Double', () => this.table.double());
-        this.splitButton = play(552, 'Split', () => this.table.split());
+        // Placed by layoutPlayRow once it knows which of them are showing.
+        const play = (label: string, onClick: () => void, width = PLAY_W): Button =>
+            new Button(this, 0, y, { label, width, height: 56, fontSize: 24, onClick });
+        this.hitButton = play('Hit', () => this.table.hit());
+        this.standButton = play('Stand', () => this.table.stand());
+        this.doubleButton = play('Double', () => this.table.double());
+        this.splitButton = play('Split', () => this.table.split());
         // Only shown when the table allows surrender and the opening hand is untouched.
-        this.surrenderButton = play(692, 'Surrender', () => this.table.surrender(), 144);
+        this.surrenderButton = play('Surrender', () => this.table.surrender(), 144);
+        this.playRow = [this.hitButton, this.standButton, this.doubleButton, this.splitButton, this.surrenderButton];
 
         this.insuranceYes = new Button(this, 400, y, {
             label: 'Take insurance',
@@ -234,9 +250,9 @@ export class Standard extends Scene {
             onClick: () => this.table.declineInsurance(),
         });
 
-        this.askButton = new Button(this, 850, y, {
+        this.askButton = new Button(this, ASK_X, y, {
             label: 'Ask dealer',
-            width: 150,
+            width: ASK_W,
             height: 56,
             fontSize: 20,
             onClick: () => this.table.askDealer(),
@@ -274,7 +290,10 @@ export class Standard extends Scene {
     }
 
     private render(v: ViewState): void {
-        this.balanceText.setText(`$${v.balance}`).setColor(this.balanceColor(v));
+        const trend = this.balanceTrend(v);
+        this.balanceText
+            .setText(`${trend > 0 ? '▲' : trend < 0 ? '▼' : ''}$${v.balance}`)
+            .setColor(trend > 0 ? COLOR.win : trend < 0 ? COLOR.lose : COLOR.text);
         this.betText.setText(`$${v.betDisplay}`);
         this.shoe.set(v.shoeRemaining, v.shoeTotal, 'in shoe');
         this.discard.set(v.shoeDiscarded, v.shoeTotal, 'discarded');
@@ -327,14 +346,13 @@ export class Standard extends Scene {
     }
 
     /**
-     * Green above the starting bankroll, red below. Chips already staked on the table still count as
-     * yours. While a tip is pending the round is paid out, so the balance is already the whole story.
+     * 1 above the starting bankroll, -1 below, 0 level; drawn as a ▲/▼ in the win/lose colour. Chips
+     * already staked on the table still count as yours. While a tip is pending the round is paid out,
+     * so the balance is already the whole story.
      */
-    private balanceColor(v: ViewState): string {
+    private balanceTrend(v: ViewState): number {
         const worth = v.phase === 'betting' || v.phase === 'tip' ? v.balance : v.balance + v.betDisplay;
-        if (worth > v.settings.startingBalance) return COLOR.win;
-        if (worth < v.settings.startingBalance) return COLOR.lose;
-        return COLOR.text;
+        return Math.sign(worth - v.settings.startingBalance);
     }
 
     /** Returns how many ms until the last newly dealt card lands. */
@@ -417,6 +435,17 @@ export class Standard extends Scene {
         this.showAvailability(this.tipNo, v.can.tip);
 
         this.settingsButton.setEnabled(v.can.settings);
+        this.layoutPlayRow();
+    }
+
+    /** Pack the showing play buttons from the left, so a hidden one (usually Split) leaves no hole. */
+    private layoutPlayRow(): void {
+        let left = PLAY_LEFT;
+        for (const button of this.playRow) {
+            if (!button.visible) continue;
+            button.x = left + button.width / 2;
+            left += button.width + CONTROL_GAP;
+        }
     }
 
     /** Controls with no place right now are hidden; ones that exist but can't be used yet are shown dimmed. */

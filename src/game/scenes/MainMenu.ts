@@ -4,11 +4,18 @@ import { CHIPS, DEFAULT_SETTINGS } from '../logic/constants';
 import { rulesSummary } from '../logic/settings';
 import { accuracyPct } from '../logic/TrainingSession';
 import { Button } from '../ui/Button';
-import { addSoundToggle } from '../ui/hud';
+import { addSoundToggle, switchScene } from '../ui/hud';
 import { chipFrame } from '../ui/atlas';
 import { addFeltBackground, addText, CANVAS_W, COLOR, FONT_TITLE, TEX } from '../ui/theme';
 
+type Mode = 'Training' | 'Counting' | 'Standard';
+
 export class MainMenu extends Scene {
+    /** The mode buttons, top to bottom, for the arrow keys. */
+    private modes: { mode: Mode; button: Button }[] = [];
+    /** The highlighted mode; kept across visits so Esc back from a game lands on the one just played. */
+    private selected = 0;
+
     constructor() {
         super('MainMenu');
     }
@@ -25,7 +32,7 @@ export class MainMenu extends Scene {
             color: COLOR.gold,
             stroke: true,
         });
-        addText(this, cx, 222, 'Pick a mode', { size: 24, color: COLOR.text, stroke: true });
+        addText(this, cx, 222, 'Pick a mode  ·  arrow keys and Enter', { size: 24, color: COLOR.text, stroke: true });
 
         // The saved stats are read fresh each time the menu opens, so they are current after a session.
         const training = loadTraining();
@@ -37,31 +44,40 @@ export class MainMenu extends Scene {
         const table = loadTable();
         const bankroll = table ? table.balance : DEFAULT_SETTINGS.startingBalance;
 
-        new Button(this, cx, 304, {
+        const trainingButton = new Button(this, cx, 304, {
             label: 'Training',
             sublabel: `Drill Basic Strategy  ·  best streak ${training.bestStreak}  ·  ${accuracy}`,
             width: 680,
             height: 92,
             fontSize: 36,
             variant: 'primary',
-            onClick: () => this.scene.start('Training'),
+            onClick: () => this.startMode('Training'),
         });
-        new Button(this, cx, 410, {
+        const countingButton = new Button(this, cx, 410, {
             label: 'Counting',
             sublabel: `Practise the Hi-Lo count  ·  best streak ${counting.bestStreak}  ·  ${countAccuracy}`,
             width: 680,
             height: 92,
             fontSize: 36,
-            onClick: () => this.scene.start('Counting'),
+            onClick: () => this.startMode('Counting'),
         });
-        new Button(this, cx, 516, {
+        const standardButton = new Button(this, cx, 516, {
             label: 'Standard',
             sublabel: `Play against the dealer  ·  bankroll $${bankroll}`,
             width: 680,
             height: 92,
             fontSize: 36,
-            onClick: () => this.scene.start('Standard'),
+            onClick: () => this.startMode('Standard'),
         });
+        this.modes = [
+            { mode: 'Training', button: trainingButton },
+            { mode: 'Counting', button: countingButton },
+            { mode: 'Standard', button: standardButton },
+        ];
+        // The mouse and the arrow keys share one highlight, so Enter never starts something else.
+        this.modes.forEach(({ button }, i) => button.on('pointerover', () => this.select(i)));
+        this.select(this.selected);
+        this.bindKeys();
 
         addText(this, cx, 576, rulesSummary(table ? table.rules : DEFAULT_SETTINGS.rules), {
             size: 16,
@@ -73,12 +89,38 @@ export class MainMenu extends Scene {
             width: 240,
             height: 58,
             fontSize: 22,
-            onClick: () => this.scene.start('HowToPlay'),
+            onClick: () => switchScene(this, 'HowToPlay'),
         });
-        this.input.keyboard!.on('keydown-H', () => this.scene.start('HowToPlay'));
         addSoundToggle(this);
 
         addText(this, cx, 752, '© 2026 Shane Pearson. All rights reserved.', { size: 13, color: COLOR.dim });
+    }
+
+    private bindKeys(): void {
+        const kb = this.input.keyboard!;
+        const bind = (key: string, act: () => void): void => {
+            kb.on(`keydown-${key}`, (event: KeyboardEvent) => {
+                if (!event.repeat) act();
+            });
+        };
+        const n = this.modes.length;
+        bind('UP', () => this.select((this.selected + n - 1) % n));
+        bind('LEFT', () => this.select((this.selected + n - 1) % n));
+        bind('DOWN', () => this.select((this.selected + 1) % n));
+        bind('RIGHT', () => this.select((this.selected + 1) % n));
+        bind('ENTER', () => this.startMode(this.modes[this.selected].mode));
+        bind('SPACE', () => this.startMode(this.modes[this.selected].mode));
+        bind('H', () => switchScene(this, 'HowToPlay'));
+    }
+
+    private select(index: number): void {
+        this.selected = index;
+        this.modes.forEach(({ button }, i) => button.setSelected(i === index));
+    }
+
+    private startMode(mode: Mode): void {
+        this.selected = this.modes.findIndex((m) => m.mode === mode);
+        switchScene(this, mode);
     }
 
     /** A fan of cards and a few chips, cut from the same sprite sheet as the game. */

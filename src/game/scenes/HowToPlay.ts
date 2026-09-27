@@ -28,7 +28,7 @@ import {
 
 import { loadTraining } from '../storage';
 import { Button } from '../ui/Button';
-import { addSoundToggle } from '../ui/hud';
+import { addSoundToggle, switchScene } from '../ui/hud';
 import { addFeltBackground, addText, CANVAS_W, COLOR, FONT_TITLE, HEX } from '../ui/theme';
 
 /** The page body sits in this rounded panel; every page lays out inside it. */
@@ -95,8 +95,6 @@ function chartCell(cards: [Rank, Rank], up: Rank): { cell: Cell; id: CellId } {
     return { cell: play, id };
 }
 
-/** Outline colour for a cell still being missed (COLOR.lose as a number). */
-const MISS_HEX = 0xff8a8a;
 /** How many cells the Mistakes page lists by name. */
 const MOST_MISSED = 5;
 
@@ -333,8 +331,9 @@ export class HowToPlay extends Scene {
 
         new Button(this, 84, 40, {
             label: 'Back',
+            sublabel: 'Esc',
             width: 120,
-            height: 44,
+            height: 52,
             fontSize: 20,
             onClick: () => this.back(),
         });
@@ -394,7 +393,7 @@ export class HowToPlay extends Scene {
     }
 
     private back(): void {
-        this.scene.start(this.backTo);
+        switchScene(this, this.backTo);
     }
 
     private showPage(i: number): void {
@@ -466,7 +465,7 @@ export class HowToPlay extends Scene {
                 g.fillStyle(style.fill, alpha).fillRect(left + 1, top + 1, cellW - 2, rowH - 2);
                 if (missed > 0) {
                     const w = missed >= 3 ? 3 : 2;
-                    outlines.lineStyle(w, MISS_HEX, 1).strokeRect(left + w / 2, top + w / 2, cellW - w, rowH - w);
+                    outlines.lineStyle(w, HEX.lose, 1).strokeRect(left + w / 2, top + w / 2, cellW - w, rowH - w);
                 }
                 page.add(
                     addText(this, left + cellW / 2, top + rowH / 2, style.label, {

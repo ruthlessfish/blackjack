@@ -1,17 +1,41 @@
-import { GameObjects, Scene } from 'phaser';
+import { GameObjects, Scene, Scenes } from 'phaser';
 import { saveMuted } from '../storage';
 import { Button } from './Button';
 import { sfx } from './sound';
 import { addText, COLOR, HEX } from './theme';
 
-/** The Menu button in the top-left corner of both game screens. */
-export function addMenuButton(scene: Scene): Button {
+/** Scenes that have already asked to switch and are waiting for the scene manager to act on it. */
+const leaving = new WeakSet<Scene>();
+
+/**
+ * Switch to another scene, once. Scene changes are queued until the next frame, so two presses landing
+ * in the same frame (Enter and Space, or Esc and H) would otherwise start two scenes on top of each other.
+ */
+export function switchScene(scene: Scene, key: string, data?: object): void {
+    if (leaving.has(scene)) return;
+    leaving.add(scene);
+    scene.events.once(Scenes.Events.SHUTDOWN, () => leaving.delete(scene));
+    scene.scene.start(key, data);
+}
+
+/**
+ * The Menu button in the top-left corner of the game screens, also on the `Esc` key. `canLeave` runs
+ * first for Esc only, so a scene can use the key to close something of its own (and return false).
+ */
+export function addMenuButton(scene: Scene, canLeave: () => boolean = () => true): Button {
+    const toMenu = (): void => {
+        switchScene(scene, 'MainMenu');
+    };
+    scene.input.keyboard!.on('keydown-ESC', (event: KeyboardEvent) => {
+        if (!event.repeat && canLeave()) toMenu();
+    });
     return new Button(scene, 84, 40, {
         label: 'Menu',
+        sublabel: 'Esc',
         width: 120,
-        height: 44,
+        height: 52,
         fontSize: 20,
-        onClick: () => scene.scene.start('MainMenu'),
+        onClick: toMenu,
     });
 }
 
@@ -38,10 +62,10 @@ const soundLabel = (): string => (sfx.muted ? '🔇' : '🔊');
 
 /** The sound toggle in the bottom-right corner of every screen, also on the `M` key. The setting is saved. */
 export function addSoundToggle(scene: Scene): Button {
-    const button = new Button(scene, 996, 740, {
+    const button = new Button(scene, 992, 736, {
         label: soundLabel(),
-        width: 44,
-        height: 44,
+        width: 52,
+        height: 52,
         fontSize: 20,
         onClick: () => toggle(),
     });

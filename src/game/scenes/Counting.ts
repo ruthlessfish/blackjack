@@ -9,7 +9,7 @@ import { HandView } from '../ui/HandView';
 import { addMenuButton, addSoundToggle, addStatBox } from '../ui/hud';
 import { Pile } from '../ui/Pile';
 import { sfx } from '../ui/sound';
-import { addFeltBackground, addText, CANVAS_W, COLOR, HEX } from '../ui/theme';
+import { addFeltBackground, addText, CANVAS_W, COLOR, HEX, markAnswer } from '../ui/theme';
 
 /** A quiz answered without a miss moves on by itself after this long; a miss waits for the player. */
 const AUTO_ADVANCE_MS = 1200;
@@ -122,7 +122,7 @@ export class Counting extends Scene {
         this.resetButton = new Button(this, CANVAS_W - 84, 40, {
             label: 'Reset stats',
             width: 130,
-            height: 44,
+            height: 52,
             fontSize: 17,
             onClick: () => this.onReset(),
         });
@@ -150,10 +150,10 @@ export class Counting extends Scene {
         const rx = CANVAS_W - 84;
         addText(this, rx, 116, 'DECKS', { size: 16, bold: true, color: COLOR.dim, stroke: true });
         DECK_OPTIONS.forEach((decks, i) => {
-            const button = new Button(this, rx, 156 + i * 54, {
+            const button = new Button(this, rx, 160 + i * 60, {
                 label: `${decks}`,
                 width: 124,
-                height: 44,
+                height: 52,
                 fontSize: 21,
                 onClick: () => this.setDecks(decks),
             });
@@ -383,7 +383,7 @@ export class Counting extends Scene {
         }
 
         if (v.feedback) {
-            this.feedback.setText(v.feedback.text).setColor(v.feedback.correct ? COLOR.win : COLOR.lose);
+            this.feedback.setText(markAnswer(v.feedback.text, v.feedback.correct)).setColor(v.feedback.correct ? COLOR.win : COLOR.lose);
         } else {
             this.feedback.setText('');
         }

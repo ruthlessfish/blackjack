@@ -1,5 +1,5 @@
 import { GameObjects, Scene } from 'phaser';
-import { bindClick } from './click';
+import { bindClick, setPaddedInteractive } from './click';
 import { COLOR, FONT, HEX } from './theme';
 
 export interface ButtonOptions {
@@ -60,7 +60,7 @@ export class Button extends GameObjects.Container {
         }
 
         this.setSize(opts.width, opts.height);
-        this.setInteractive({ useHandCursor: true });
+        setPaddedInteractive(this);
         this.on('pointerover', () => this.setHover(true));
         this.on('pointerout', () => this.setHover(false));
         bindClick(this, () => this.enabled && this.visible, opts.onClick);
