@@ -50,6 +50,8 @@ One-on-one blackjack against the dealer, played with chips.
 - Double down on any two-card hand, including after a split (unless that rule is off).
 - Split pairs up to four hands; split Aces get one card each.
 - The shoe is reshuffled when a quarter of it is left, and the dealer burns the first card after every shuffle.
+- Every 15 to 25 rounds the dealers change: "Changing dealers…" shows once the table clears, the new dealer
+  burns a card, and Ask the Dealer's accuracy goes back to where it started.
 - Late surrender, when turned on, gives up the first two cards for half the bet back (rounded down), after
   the dealer has peeked.
 - Keyboard play: `H` hit, `S` stand, `D` double, `P` split, `R` surrender, `Y` / `N` take or decline insurance, and

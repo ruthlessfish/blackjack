@@ -116,6 +116,10 @@ is set on this texture only.
   hands. In Standard the advice is right `dealerAccuracy`% of the time (50 at start); following good
   advice puts the settled round in a `tip` phase, and a tip (+5) or refusal (−5) moves the accuracy. The
   accuracy is never saved, so it resets whenever a table is created (including a return from the menu).
+  It also resets on a dealer change: after a shift of `DEALER_SHIFT_MIN/MAX_ROUNDS` rounds (rolled from
+  `random`, not saved), `changeDealerIfDue` burns a card (`Shoe.burn()`), resets the accuracy and shows
+  "Changing dealers…". It runs wherever the settled round leaves the table (sweep timer, `sweep()`, `deal()`),
+  so betting or dealing fast can't skip it.
   `StandardGame` takes a `random` option so tests can fix the dealer's luck.
 - The bankroll setting is a row of presets (`BANKROLL_OPTIONS`) because Phaser has no text input.
 - Standard's table rules (`Settings.rules`: payout, H17, DAS, late surrender) are saved with the table and

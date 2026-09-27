@@ -14,6 +14,8 @@ import {
     CHIPS,
     DEALER_ACCURACY_START,
     DEALER_ACCURACY_STEP,
+    DEALER_SHIFT_MAX_ROUNDS,
+    DEALER_SHIFT_MIN_ROUNDS,
     DECK_OPTIONS,
     DEFAULT_RULES,
     MAX_HANDS,
@@ -230,7 +232,7 @@ const PAGES: Page[] = [
             y = s.section(page, y + 14, 'Tip or refuse?', [
                 `Tip (Y): you pay $${TIP_AMOUNT} and the dealer’s advice gets ${DEALER_ACCURACY_STEP}% more accurate, up to 100%.`,
                 `Refuse (N): you keep the money, but the advice gets ${DEALER_ACCURACY_STEP}% less accurate, down to 0%.`,
-                `The dealer’s accuracy is not saved: it goes back to ${DEALER_ACCURACY_START}% whenever you return to the table from the menu or reload. Tipping trades money now for better advice for the rest of the session. Or learn the chart and never need to ask.`,
+                `The dealer’s accuracy is not saved: it goes back to ${DEALER_ACCURACY_START}% whenever you return to the table from the menu or reload, and when the dealers change (every ${DEALER_SHIFT_MIN_ROUNDS}–${DEALER_SHIFT_MAX_ROUNDS} rounds). Tipping trades money now for better advice for the rest of the session. Or learn the chart and never need to ask.`,
             ]);
         },
     },

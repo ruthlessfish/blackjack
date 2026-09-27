@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { Card } from '@/game/logic/card';
-import { DEFAULT_RULES, DEFAULT_SETTINGS, TIP_AMOUNT } from '@/game/logic/constants';
+import { DEALER_SHIFT_MIN_ROUNDS, DEFAULT_RULES, DEFAULT_SETTINGS, TIP_AMOUNT } from '@/game/logic/constants';
 import { freshStats } from '@/game/logic/settings';
 import { Shoe } from '@/game/logic/shoe';
 import { StandardGame } from '@/game/logic/StandardGame';
@@ -584,5 +584,77 @@ describe('session stats', () => {
         game.stand();
         expect(game.view().balance).toBe(100);
         expect(game.view().stats).toMatchObject({ rounds: 1, losses: 1 });
+    });
+});
+
+describe('changing dealers', () => {
+    /** Four cards a round: 18 against 18, a push the player stands on. */
+    const PUSH: Rank[] = ['10', '8', '10', '8'];
+    const pushes = (n: number): Rank[] => Array.from({ length: n }, () => PUSH).flat();
+
+    /** Play `n` pushed rounds on the carried bet. */
+    function playPushes(game: StandardGame, n: number): void {
+        for (let i = 0; i < n; i++) {
+            game.deal();
+            game.stand();
+        }
+    }
+
+    it('changes dealer after the shift, once the settled round is swept, and burns a card', () => {
+        // A roll of 0 makes the shift the shortest one.
+        const clock = manualClock();
+        const game = table(pushes(DEALER_SHIFT_MIN_ROUNDS), undefined, clock.schedule, () => 0);
+        game.addBet(5);
+        playPushes(game, DEALER_SHIFT_MIN_ROUNDS - 1);
+        clock.fire();
+        expect(game.view().message.text).not.toBe('Changing dealers…');
+
+        playPushes(game, 1);
+        const before = game.view().shoeRemaining;
+        expect(game.view().message.text).not.toBe('Changing dealers…'); // the result is still up
+        clock.fire();
+        expect(game.view().message.text).toBe('Changing dealers…');
+        expect(game.view().shoeRemaining).toBe(before - 1);
+        expect(game.view().shoeDiscarded).toBe(2); // the shuffle's burn card and the new dealer's
+    });
+
+    it('keeps the message up while the next bet goes down, and changes only once', () => {
+        const clock = manualClock();
+        const game = table(pushes(DEALER_SHIFT_MIN_ROUNDS), undefined, clock.schedule, () => 0);
+        game.addBet(5);
+        playPushes(game, DEALER_SHIFT_MIN_ROUNDS);
+        const before = game.view().shoeRemaining;
+        game.addBet(5); // beats the sweep timer
+        expect(game.view().message.text).toBe('Changing dealers…');
+        game.addBet(5);
+        expect(game.view().shoeRemaining).toBe(before - 1);
+    });
+
+    it('still burns a card when Deal beats the sweep', () => {
+        const game = table(pushes(DEALER_SHIFT_MIN_ROUNDS + 1), undefined, undefined, () => 0);
+        game.addBet(5);
+        playPushes(game, DEALER_SHIFT_MIN_ROUNDS);
+        const before = game.view().shoeRemaining;
+        game.deal();
+        expect(game.view().shoeRemaining).toBe(before - 1);
+    });
+
+    it('puts the advice back to the starting accuracy', () => {
+        // A tip lifts the accuracy to 55%, where a roll of 0.52 lands; the new dealer is back at 50%.
+        let roll = 0;
+        const script: Rank[] = ['10', '6', '10', '7', '2', ...pushes(DEALER_SHIFT_MIN_ROUNDS - 1), '10', '6', '10', '7'];
+        const game = table(script, undefined, undefined, () => roll);
+        game.addBet(5);
+        game.deal();
+        game.askDealer();
+        game.hit();
+        game.stand();
+        game.tipDealer();
+        playPushes(game, DEALER_SHIFT_MIN_ROUNDS - 1);
+
+        roll = 0.52;
+        game.deal();
+        game.askDealer();
+        expect(game.view().advice).not.toBe('hit');
     });
 });

@@ -16,6 +16,9 @@ export const ASK_RECHARGE_HANDS = 3;
 export const TIP_AMOUNT = 5;
 export const DEALER_ACCURACY_START = 50; // percent, reset every time a table is created
 export const DEALER_ACCURACY_STEP = 5;
+/** A Standard dealer's shift, in rounds: a new dealer (accuracy back to the start) takes over after a random count in this range. */
+export const DEALER_SHIFT_MIN_ROUNDS = 15;
+export const DEALER_SHIFT_MAX_ROUNDS = 25;
 
 /** How long each card stays up in Counting mode, per speed setting. */
 export const COUNT_SPEED_MS: Record<CountSpeed, number> = { slow: 1500, medium: 1000, fast: 600 };

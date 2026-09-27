@@ -3,6 +3,8 @@ import {
     CHIPS,
     DEALER_ACCURACY_START,
     DEALER_ACCURACY_STEP,
+    DEALER_SHIFT_MAX_ROUNDS,
+    DEALER_SHIFT_MIN_ROUNDS,
     DEFAULT_SETTINGS,
     MAX_HANDS,
     MIN_BET,
@@ -33,6 +35,7 @@ import type {
 } from './types';
 
 const BET_PROMPT = 'Place your bet to begin.';
+const DEALER_CHANGE = 'Changing dealers…';
 
 const timeoutScheduler: Scheduler = (fn, ms) => {
     const id = setTimeout(fn, ms);
@@ -91,6 +94,10 @@ export class StandardGame {
     private owesTip = false;
     /** The settlement line, held while the tip question takes over the message. */
     private settledMessage: MessageView = { text: '' };
+    /** Rounds until the dealer's shift ends. Not saved, so every new table starts a new shift. */
+    private roundsLeftInShift: number;
+    /** The shift is over; the new dealer takes over once the settled round leaves the table. */
+    private dealerChangeDue = false;
 
     private readonly onChange: (state: ViewState) => void;
     private readonly schedule: Scheduler;
@@ -105,6 +112,7 @@ export class StandardGame {
         this.shoe = shoe ?? new Shoe(saved ? saved.decks : DEFAULT_SETTINGS.decks);
         this.player = new Player(saved ? saved.balance : this.startingBalance);
         this.stats = saved ? { ...saved.stats } : freshStats(this.player.balance);
+        this.roundsLeftInShift = this.rollShift();
     }
 
     /** Drop the table's timers. Called when the scene shuts down. */
@@ -158,6 +166,7 @@ export class StandardGame {
     private sweep(): void {
         this.cancelSweep();
         this.clearTable();
+        this.changeDealerIfDue();
     }
 
     private clearTable(): void {
@@ -176,6 +185,7 @@ export class StandardGame {
             this.cancelSweepTimer = null;
             if (this.phase !== 'betting') return;
             this.clearTable();
+            this.changeDealerIfDue();
             this.render();
         }, SWEEP_DELAY_MS);
     }
@@ -223,6 +233,7 @@ export class StandardGame {
         if (this.phase !== 'betting' || this.player.pendingBet <= 0) return;
         this.cancelSweep();
         if (this.shoe.needsReshuffle()) this.shoe.reset();
+        this.changeDealerIfDue();
         this.advice = null;
         this.owesTip = false;
 
@@ -533,12 +544,34 @@ export class StandardGame {
         }
 
         this.stats.peakBalance = Math.max(this.stats.peakBalance, this.player.balance);
+        if (--this.roundsLeftInShift <= 0) this.dealerChangeDue = true;
         this.phase = 'betting';
         // Carry the stake into the next round so the player can just hit Deal;
         // if the balance no longer covers it, start from zero instead.
         this.player.carryBet();
         this.render();
         this.scheduleSweep();
+    }
+
+    private rollShift(): number {
+        const span = DEALER_SHIFT_MAX_ROUNDS - DEALER_SHIFT_MIN_ROUNDS + 1;
+        return DEALER_SHIFT_MIN_ROUNDS + Math.floor(this.random() * span);
+    }
+
+    /**
+     * Once a shift is over, a new dealer takes over between rounds: the advice
+     * accuracy tips bought goes back to the start, and the next card is burned.
+     * Called wherever a settled round leaves the table, so playing fast can't skip it.
+     */
+    private changeDealerIfDue(): void {
+        if (!this.dealerChangeDue) return;
+        this.dealerChangeDue = false;
+        this.roundsLeftInShift = this.rollShift();
+        this.dealerAccuracy = DEALER_ACCURACY_START;
+        this.shoe.burn();
+        // The out-of-funds notice has had its turn; don't let the next bet swap this for the prompt.
+        this.bankrollWasReset = false;
+        this.setMessage(DEALER_CHANGE);
     }
 
     /** Add a settled round to the stats, once per round by its net result. */

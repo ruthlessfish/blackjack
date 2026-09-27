@@ -54,6 +54,12 @@ export class Shoe {
         return this.numDecks;
     }
 
+    /** Discard the top card unseen. An empty shoe is rebuilt instead, which burns one itself. */
+    burn(): void {
+        if (this.cards.length === 0) this.reset();
+        else this.cards.pop();
+    }
+
     needsReshuffle(): boolean {
         return this.cards.length < this.total * RESHUFFLE_FRACTION;
     }
